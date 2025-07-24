@@ -9,7 +9,6 @@ import RegisterCustomersRouter from "./routes/RegisterCustomers.routes.js";
 dotenv.config(); // Load biến môi trường từ .env
 
 const app = express();
-const server = http.createServer(app);
 
 // Kết nối MongoDB
 connectDB()
@@ -22,7 +21,6 @@ connectDB()
 // ⚙️ Cấu hình CORS
 const allowedOrigins = [
   "http://localhost:5173",
-  // "https://binance3.onrender.com"
 ];
 
 app.use(
@@ -37,15 +35,20 @@ app.use(
   })
 );
 
-// Middleware
 app.use(express.json());
 app.use(morgan("dev"));
-// Routes
+
+// 📌 Prefix routes
 app.use("/customers", RegisterCustomersRouter);
 
-const port = process.env.PORT || 5000;
-server.listen(port, () => {
-  console.log(`🚀 Server running on http://localhost:${port}`);
-});
+// ✅ Export app để test
+export default app;
 
-export default server;
+// 🟢 Khởi chạy server nếu chạy trực tiếp (không khi import test)
+if (process.env.NODE_ENV !== "test") {
+  const server = http.createServer(app);
+  const port = process.env.PORT || 5000;
+  server.listen(port, () => {
+    console.log(`🚀 Server running on http://localhost:${port}`);
+  });
+}
