@@ -1,0 +1,28 @@
+{
+  "name": "car-buy-sell",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon ./server.js",
+    "start": "nodemon ./server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
+    "dotenv": "^17.2.0",
+    "env": "^0.0.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "http-proxy-agent": "^7.0.2",
+    "joi": "^17.13.3",
+    "mongoose": "^8.16.4",
+    "morgan": "^1.10.1",
+    "nodemon": "^3.1.10"
+  }
+}
