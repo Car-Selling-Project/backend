@@ -7,9 +7,12 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "jest",
+    "test:register": "jest tests/register.test.js",
     "test:rate": "jest tests/rate-limit.test.js",
     "test:login": "jest tests/login.test.js",
+    "test:registeradmin": "jest tests/registeradmins.test.js",
+    "test:ratelogin": "jest tests/loginrate-limit.test.js",
+    "test:adminlogin":"jest tests/loginadmin.test.js",
     "dev": "nodemon ./server.js",
     "start": "nodemon ./server.js"
   },

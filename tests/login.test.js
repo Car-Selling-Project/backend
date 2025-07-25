@@ -2,107 +2,102 @@ import request from "supertest";
 import app from "../server.js";
 import mongoose from "mongoose";
 
-const basePayload = {
-  email: "login@test.com",
-  password: "Test@123"
+const validPayload = {
+  employeeCode: "AD1234",
+  password: "Valid@123"
 };
 
 beforeAll(async () => {
-  // tạo user test trước khi login
-  await request(app).post("/customers/register").send({
-    name: "Login Test",
-    email: basePayload.email,
+  const res = await request(app).post("/admins/register").send({
+    name: "Admin Test",
+    employeeCode: validPayload.employeeCode,
     phone: "0988888811",
-    password: basePayload.password,
-    confirmPassword: basePayload.password,
-    dob: "1995-01-01",
-    gender: "male"
+    password: validPayload.password,
+    confirmPassword: validPayload.password,
+    dob: "1990-01-01",
+    gender: "male",
   });
+
+  if (res.statusCode !== 201) {
+    console.error("❌ Register setup failed:", res.body);
+  }
 });
 
 afterAll(async () => {
   await mongoose.disconnect();
 });
 
-describe("POST /customers/login", () => {
-  // ✅ Happy case
-  it("should login successfully with correct credentials", async () => {
-    const res = await request(app)
-      .post("/customers/login")
-      .send(basePayload);
-
+describe("POST /admins/login", () => {
+  it("should login successfully with valid credentials", async () => {
+    const res = await request(app).post("/admins/login").send(validPayload);
     expect(res.statusCode).toBe(200);
     expect(res.body.accessToken).toBeDefined();
-    expect(res.body.customer).toBeDefined();
+    expect(res.body.refreshToken).toBeDefined();
   });
 
-  // ❌ Thiếu email
-  it("should return 400 if email is missing", async () => {
-    const res = await request(app)
-      .post("/customers/login")
-      .send({ password: basePayload.password });
-
+  it("should return 400 if employeeCode is missing", async () => {
+    const res = await request(app).post("/admins/login").send({ password: validPayload.password });
     expect(res.statusCode).toBe(400);
-    expect(res.body.errors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ key: "email" })
-      ])
-    );
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "employeeCode" })]));
   });
 
-  // ❌ Thiếu password
   it("should return 400 if password is missing", async () => {
-    const res = await request(app)
-      .post("/customers/login")
-      .send({ email: basePayload.email });
-
+    const res = await request(app).post("/admins/login").send({ employeeCode: validPayload.employeeCode });
     expect(res.statusCode).toBe(400);
-    expect(res.body.errors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ key: "password" })
-      ])
-    );
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "password" })]));
   });
 
-  // ❌ Email không tồn tại
-  it("should return 401 if email does not exist", async () => {
-    const res = await request(app)
-      .post("/customers/login")
-      .send({ email: "nonexistent@test.com", password: "Test@123" });
-
+  it("should return 401 if employeeCode does not exist", async () => {
+    const res = await request(app).post("/admins/login").send({
+      employeeCode: "AD9999",
+      password: validPayload.password
+    });
     expect(res.statusCode).toBe(401);
-    expect(res.body.message).toMatch(/email does not exist/i);
+    expect(res.body.message).toMatch(/employee code does not exist/i);
   });
 
-  // ❌ Mật khẩu sai
-  it("should return 401 if password is incorrect", async () => {
-    const res = await request(app)
-      .post("/customers/login")
-      .send({ email: basePayload.email, password: "WrongPass123" });
-
-    expect(res.statusCode).toBe(401);
-    expect(res.body.message).toMatch(/incorrect password/i);
+  it("should return 400 if password is incorrect", async () => {
+    const res = await request(app).post("/admins/login").send({
+      employeeCode: validPayload.employeeCode,
+      password: "Wrong@123"
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "password" })]));
   });
 
-  // ❌ Gửi quá 5 lần → bị rate-limit
-  it("should block 6th login attempt due to rate-limit", async () => {
-    for (let i = 0; i < 5; i++) {
-      const res = await request(app)
-        .post("/customers/login")
-        .send({ email: "ratelogin@test.com", password: "Wrong123!" });
+  it("should return 400 if employeeCode format is invalid", async () => {
+    const res = await request(app).post("/admins/login").send({
+      employeeCode: "INVALID",
+      password: validPayload.password
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "employeeCode" })]));
+  });
 
-      // Không quan tâm pass hay sai, miễn gửi là tính quota
-    }
+  it("should return 400 if password contains space", async () => {
+    const res = await request(app).post("/admins/login").send({
+      employeeCode: validPayload.employeeCode,
+      password: "Valid @123"
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "password" })]));
+  });
 
-    const res6 = await request(app)
-      .post("/customers/login")
-      .send({ email: "ratelogin@test.com", password: "Wrong123!" });
+  it("should return 400 if password contains newline", async () => {
+    const res = await request(app).post("/admins/login").send({
+      employeeCode: validPayload.employeeCode,
+      password: "Valid@123\n"
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "password" })]));
+  });
 
-    expect(res6.statusCode).toBe(429);
-    expect(res6.body.errors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ key: "ip" })
-      ])
-    );
+  it("should return 400 if password contains ; or ,", async () => {
+    const res = await request(app).post("/admins/login").send({
+      employeeCode: validPayload.employeeCode,
+      password: "Valid@123;"
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.errors).toEqual(expect.arrayContaining([expect.objectContaining({ key: "password" })]));
   });
 });

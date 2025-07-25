@@ -15,8 +15,7 @@ const validPhonePrefixes = [
 
 const nameRegex = /^[A-Z][a-zà-ỹ]*(\s[A-Z][a-zà-ỹ]*)*$/u;
 const phoneRegex = new RegExp(`^(${validPhonePrefixes.join('|')})\\d{7}$`);
-const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%^&*]{5,32}$/;
-const genderRegex = /^(male|female|other)$/;
+const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%^&*]{5,32}$/;
 
 
 
@@ -31,15 +30,27 @@ export const customerSchema = Joi.object({
       'string.max': 'Name must not exceed 100 characters'
     }),
 
-  email: Joi.string()
-    .email({ tlds: { allow: false } })
-    .required()
-    .pattern(/^[^\s\n]+@[^\s\n]+\.[^\s\n]+$/)
-    .messages({
-      'string.empty': 'Email is required',
-      'string.pattern.base': 'Email must not contain spaces or new lines',
-      'string.email': 'Invalid email format'
-    }),
+email: Joi.string()
+  .required()
+  .custom((value, helpers) => {
+    if (value.includes(' ')) {
+      return helpers.message("Email must not contain spaces");
+    }
+    if (value.includes('\n')) {
+      return helpers.message("Email must not contain new lines");
+    }
+    if ((value.match(/@/g) || []).length > 1) {
+      return helpers.message("Email must not contain multiple @ characters");
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return helpers.message("Invalid email format");
+    }
+    return value;
+  })
+  .messages({
+    'string.empty': 'Email is required',
+  }),
 
   phone: Joi.string()
     .pattern(phoneRegex)
@@ -82,14 +93,10 @@ export const customerSchema = Joi.object({
       'date.format': 'Date of birth must be in ISO format (yyyy-mm-dd)'
     }),
 
-    gender: Joi.string()
-    .pattern(genderRegex)
-    .valid('male', 'female', 'other')
-    .required()
-    .messages({
-      'string.pattern.base': 'Gender must not contain whitespace, numbers, or special characters',
-      'any.only': 'Gender must be one of: male, female, or other',
-      'string.empty': 'Gender is required'
-    })
+   gender: Joi.string()
+  .trim()
+  .valid('male', 'female', 'other')
+  .required()
+
 
 });

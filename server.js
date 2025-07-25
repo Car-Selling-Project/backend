@@ -6,6 +6,8 @@ import morgan from "morgan";
 import connectDB from "./configs/connectdb.js";
 import RegisterCustomersRouter from "./routes/RegisterCustomers.routes.js";
 import LoginCustomersRouter from "./routes/LoginCustomers.routes.js";
+import RegisterAdminsRouter from "./routes/RegisterAdmins.routes.js";
+import LoginAdminRouter from "./routes/LoginAdmin.routes.js";
 
 dotenv.config(); // Load biến môi trường từ .env
 
@@ -42,6 +44,8 @@ app.use(morgan("dev"));
 // 📌 Prefix routes
 app.use("/customers", RegisterCustomersRouter);
 app.use("/customers", LoginCustomersRouter);
+app.use("/admins", RegisterAdminsRouter);
+app.use("/admins", LoginAdminRouter);
 
 // ✅ Export app để test
 export default app;
