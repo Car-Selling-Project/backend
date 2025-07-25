@@ -9,7 +9,7 @@ export const registerRateLimiter = rateLimit({
             errors: [
                 {
                     key: "ip",
-                    message: 'Bạn đã đăng ký quá 5 lần trong 5 phút. Vui lòng thử lại sau 10 phút.'
+                    message: 'You have registered more than 5 times in 5 minutes. Please try again after 10 minutes.'
                 }
             ]
         };

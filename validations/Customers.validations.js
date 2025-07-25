@@ -15,7 +15,10 @@ const validPhonePrefixes = [
 
 const nameRegex = /^[A-Z][a-zà-ỹ]*(\s[A-Z][a-zà-ỹ]*)*$/u;
 const phoneRegex = new RegExp(`^(${validPhonePrefixes.join('|')})\\d{7}$`);
-const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*\d)[A-Za-z\d!@#$%^&*]{5,32}$/;
+const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%^&*]{5,32}$/;
+const genderRegex = /^(male|female|other)$/;
+
+
 
 export const customerSchema = Joi.object({
   name: Joi.string()
@@ -23,9 +26,9 @@ export const customerSchema = Joi.object({
     .max(100)
     .required()
     .messages({
-      'string.empty': 'Tên không được để trống',
-      'string.pattern.base': 'Tên phải viết hoa chữ cái đầu, không số, không ký tự đặc biệt, không xuống dòng',
-      'string.max': 'Tên không vượt quá 100 ký tự'
+      'string.empty': 'Name is required',
+      'string.pattern.base': 'Name must start with a capital letter, contain no numbers or special characters',
+      'string.max': 'Name must not exceed 100 characters'
     }),
 
   email: Joi.string()
@@ -33,33 +36,34 @@ export const customerSchema = Joi.object({
     .required()
     .pattern(/^[^\s\n]+@[^\s\n]+\.[^\s\n]+$/)
     .messages({
-      'string.empty': 'Email không được để trống',
-      'string.pattern.base': 'Email không chứa khoảng trắng hoặc xuống dòng',
-      'string.email': 'Email không đúng định dạng'
+      'string.empty': 'Email is required',
+      'string.pattern.base': 'Email must not contain spaces or new lines',
+      'string.email': 'Invalid email format'
     }),
 
   phone: Joi.string()
     .pattern(phoneRegex)
     .required()
     .messages({
-      'string.empty': 'Số điện thoại không được để trống',
-      'string.pattern.base': 'Số điện thoại không hợp lệ hoặc không đúng đầu số'
+      'string.empty': 'Phone number is required',
+      'string.pattern.base': 'Phone number is invalid or has an incorrect prefix'
     }),
 
   password: Joi.string()
     .pattern(passwordRegex)
     .required()
     .messages({
-      'string.empty': 'Mật khẩu không được để trống',
-      'string.pattern.base': 'Mật khẩu từ 5-32 ký tự, ít nhất 1 ký tự đặc biệt, 1 chữ số, không khoảng trắng, không xuống dòng'
+      'string.empty': 'Password is required',
+      'string.pattern.base': 'Password must be 5–32 characters, include at least one special character and one digit, and must not contain the semicolon (;) character'
+
     }),
 
   confirmPassword: Joi.any()
     .valid(Joi.ref('password'))
     .required()
     .messages({
-      'any.only': 'Xác nhận mật khẩu không khớp',
-      'any.required': 'Xác nhận mật khẩu không được để trống'
+      'any.only': 'Confirm password does not match',
+      'any.required': 'Confirm password is required'
     }),
 
   dob: Joi.date()
@@ -68,21 +72,24 @@ export const customerSchema = Joi.object({
     .custom((value, helpers) => {
       const year = dayjs(value).year();
       if (year < minYear || year > maxYear) {
-        return helpers.message(`Tuổi phải từ 18 đến dưới 75 (${minYear} - ${maxYear})`);
+        return helpers.message(`Age must be between 18 and 75 years old (${minYear} - ${maxYear})`);
       }
       return value;
     })
     .messages({
-      'date.base': 'Ngày sinh không hợp lệ',
-      'date.empty': 'Ngày sinh không được để trống',
-      'date.format': 'Ngày sinh không đúng định dạng ISO (yyyy-mm-dd)'
+      'date.base': 'Date of birth is invalid',
+      'date.empty': 'Date of birth is required',
+      'date.format': 'Date of birth must be in ISO format (yyyy-mm-dd)'
     }),
 
-  gender: Joi.string()
-    .valid('nam', 'nữ', 'khác')
+    gender: Joi.string()
+    .pattern(genderRegex)
+    .valid('male', 'female', 'other')
     .required()
     .messages({
-      'any.only': 'Giới tính phải là nam, nữ hoặc khác',
-      'string.empty': 'Giới tính không được để trống'
+      'string.pattern.base': 'Gender must not contain whitespace, numbers, or special characters',
+      'any.only': 'Gender must be one of: male, female, or other',
+      'string.empty': 'Gender is required'
     })
+
 });

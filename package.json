@@ -8,6 +8,8 @@
   "main": "server.js",
   "scripts": {
     "test": "jest",
+    "test:rate": "jest tests/rate-limit.test.js",
+    "test:login": "jest tests/login.test.js",
     "dev": "nodemon ./server.js",
     "start": "nodemon ./server.js"
   },
@@ -21,6 +23,7 @@
     "express-rate-limit": "^8.0.1",
     "http-proxy-agent": "^7.0.2",
     "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
     "morgan": "^1.10.1",
     "nodemon": "^3.1.10"

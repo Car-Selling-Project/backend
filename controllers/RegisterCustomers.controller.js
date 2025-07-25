@@ -10,7 +10,7 @@ export const registerCustomer = async (req, res) => {
         errors: [
           {
             key: "global",
-            message: "Vui lòng nhập đầy đủ tất cả các trường",
+            message: "Please fill in all required fields",
           },
         ],
       });
@@ -22,71 +22,65 @@ export const registerCustomer = async (req, res) => {
         errors: [
           {
             key: "confirmPassword",
-            message: "Mật khẩu và xác nhận mật khẩu không khớp",
+            message: "Password and confirm password do not match",
           },
         ],
       });
     }
 
-    // ✅ 3. Check trùng email
+    // ✅ 3. Check duplicate email
     const existingEmail = await Customer.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({
         errors: [
           {
             key: "email",
-            message: "Email đã được sử dụng",
+            message: "Email is already in use",
           },
         ],
       });
     }
 
-    // ✅ 4. Check trùng số điện thoại
+    // ✅ 4. Check duplicate phone
     const existingPhone = await Customer.findOne({ phone });
     if (existingPhone) {
       return res.status(400).json({
         errors: [
           {
             key: "phone",
-            message: "Số điện thoại đã được sử dụng",
+            message: "Phone number is already in use",
           },
         ],
       });
     }
 
-    // ✅ 5. Map gender tiếng Việt → tiếng Anh
-    const genderMap = {
-      nam: 'male',
-      nữ: 'female',
-      khác: 'other'
-    };
-
-    const mappedGender = genderMap[gender.toLowerCase().trim()];
-    if (!mappedGender) {
+    // ✅ 5. Validate gender directly
+    const validGenders = ["male", "female", "other"];
+    if (!validGenders.includes(gender.toLowerCase().trim())) {
       return res.status(400).json({
         errors: [
           {
             key: "gender",
-            message: "Giới tính không hợp lệ",
+            message: "Invalid gender",
           },
         ],
       });
     }
 
-    // ✅ 6. Tạo customer (hash xử lý ở pre-save mongoose)
+    // ✅ 6. Create customer (hash handled in mongoose pre-save)
     const newCustomer = new Customer({
       name,
       email,
       phone,
       password,
       dob,
-      gender: mappedGender
+      gender: gender.toLowerCase().trim(),
     });
 
     await newCustomer.save();
 
     res.status(201).json({
-      message: "Đăng ký thành công",
+      message: "Registration successful",
       customerId: newCustomer._id,
     });
 
@@ -96,7 +90,7 @@ export const registerCustomer = async (req, res) => {
       errors: [
         {
           key: "server",
-          message: "Đã xảy ra lỗi khi đăng ký",
+          message: "An error occurred during registration",
         },
       ],
     });
