@@ -8,6 +8,8 @@ import RegisterCustomersRouter from "./routes/RegisterCustomers.routes.js";
 import LoginCustomersRouter from "./routes/LoginCustomers.routes.js";
 import RegisterAdminsRouter from "./routes/RegisterAdmins.routes.js";
 import LoginAdminRouter from "./routes/LoginAdmin.routes.js";
+import resetPasswordCustomerRouter from "./routes/ResetPasswordCustomer.routes.js";
+import resetPasswordAdminRouter from "./routes/ResetPasswordAdmins.routes.js";
 
 dotenv.config(); // Load biến môi trường từ .env
 
@@ -42,10 +44,17 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 // 📌 Prefix routes
+//routes customers
 app.use("/customers", RegisterCustomersRouter);
 app.use("/customers", LoginCustomersRouter);
+app.use("/customers", resetPasswordCustomerRouter)
+
+
+
+//routes admin
 app.use("/admins", RegisterAdminsRouter);
 app.use("/admins", LoginAdminRouter);
+app.use("/admins", resetPasswordAdminRouter )
 
 // ✅ Export app để test
 export default app;

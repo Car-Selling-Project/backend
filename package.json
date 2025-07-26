@@ -11,8 +11,9 @@
     "test:rate": "jest tests/rate-limit.test.js",
     "test:login": "jest tests/login.test.js",
     "test:registeradmin": "jest tests/registeradmins.test.js",
-    "test:ratelogin": "jest tests/loginrate-limit.test.js",
     "test:adminlogin":"jest tests/loginadmin.test.js",
+    "test:resetpasswordcustomer":"jest tests/resetpasswordcustomers.test.js",
+    "test:resetpasswordadmin":"jest tests/resetpasswordadmins.test.js",
     "dev": "nodemon ./server.js",
     "start": "nodemon ./server.js"
   },

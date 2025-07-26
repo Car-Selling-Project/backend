@@ -2,7 +2,7 @@ import rateLimit from "express-rate-limit";
 
 export const loginRateLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 phút
-  max: 10, // Tối đa 5 lần
+  max: 5, // Tối đa 5 lần
   standardHeaders: true,
   legacyHeaders: false,
   message: (req, res) => {

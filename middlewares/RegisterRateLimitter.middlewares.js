@@ -1,7 +1,7 @@
 import rateLimit from "express-rate-limit";
 export const registerRateLimiter = rateLimit({
     windowMs: 5*60*1000,
-    max:10,
+    max:5,
     standardHeaders: true,
     legacyHeaders: false,
     message: (req, res) => {
