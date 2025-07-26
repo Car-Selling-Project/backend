@@ -8,7 +8,7 @@ const validPhonePrefixes = [
   '092','056','058','099','059'
 ];
 
-const nameRegex = /^[A-Z][a-zà-ỹ]*(\s[A-Z][a-zà-ỹ]*)*$/u;
+const nameRegex = /^[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯ][a-zàáâãèéêìíòóôõùúăđĩũơư]+(\s[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯ][a-zàáâãèéêìíòóôõùúăđĩũơư]+)*$/u;
 const phoneRegex = new RegExp(`^(${validPhonePrefixes.join('|')})\\d{7}$`);
 const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%^&*]{5,32}$/;
 

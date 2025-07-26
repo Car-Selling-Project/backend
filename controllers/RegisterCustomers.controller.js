@@ -81,7 +81,6 @@ export const registerCustomer = async (req, res) => {
 
     res.status(201).json({
       message: "Registration successful",
-      customerId: newCustomer._id,
     });
 
   } catch (err) {

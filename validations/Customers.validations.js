@@ -13,7 +13,7 @@ const validPhonePrefixes = [
   '099','059'
 ];
 
-const nameRegex = /^[A-Z][a-zà-ỹ]*(\s[A-Z][a-zà-ỹ]*)*$/u;
+const nameRegex = /^[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯ][a-zàáâãèéêìíòóôõùúăđĩũơư]+(\s[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯ][a-zàáâãèéêìíòóôõùúăđĩũơư]+)*$/u;
 const phoneRegex = new RegExp(`^(${validPhonePrefixes.join('|')})\\d{7}$`);
 const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%^&*]{5,32}$/;
 
@@ -65,7 +65,7 @@ email: Joi.string()
     .required()
     .messages({
       'string.empty': 'Password is required',
-      'string.pattern.base': 'Password must be 5–32 characters, include at least one special character and one digit, and must not contain the semicolon (;) character'
+      'string.pattern.base': 'Password must be 5–32 characters, include at least one special character and one digit, and must not contain the semicolon (;) character, must include 1 capitalized character'
 
     }),
 
