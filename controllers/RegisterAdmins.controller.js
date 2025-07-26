@@ -52,8 +52,6 @@ export const createAdmin = async (req, res) => {
 
     return res.status(201).json({
       message: 'Admin created successfully',
-      adminId: newAdmin._id,
-      employeeCode: newAdmin.employeeCode,
     });
   } catch (err) {
     console.error('[CreateAdmin]', err);
