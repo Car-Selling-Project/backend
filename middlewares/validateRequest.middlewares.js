@@ -5,7 +5,7 @@ export const validateRequest = (schema) => {
 
     if (error) {
       const errorDetails = error.details.map(err => ({
-        key: err.path[0],
+        key: err.path.join("."),
         message: err.message
       }));
       return res.status(400).json({ errors: errorDetails });
