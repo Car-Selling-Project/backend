@@ -26,10 +26,6 @@ connectDB()
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);
   });
-
-
-
-
 // ✅ Cấu hình CORS
 const allowedOrigins = ["http://localhost:5173"];
 
@@ -47,6 +43,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options("*" , cors(corsOptions))
 
 // ✅ Middleware cơ bản
 app.use(express.json());
