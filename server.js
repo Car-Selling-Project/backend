@@ -27,7 +27,30 @@ connectDB()
     process.exit(1);
   });
 
-// ✅ Middleware session
+
+
+
+// ✅ Cấu hình CORS
+const allowedOrigins = ["http://localhost:5173"];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("❌ Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// ✅ Middleware cơ bản
+app.use(express.json());
+app.use(morgan("dev"));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-secret-key",
@@ -40,26 +63,6 @@ app.use(
     },
   })
 );
-
-// ✅ Cấu hình CORS
-const allowedOrigins = ["http://localhost:5173"];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("❌ Not allowed by CORS"));
-      }
-    },
-    credentials: true, // ✅ Cho phép frontend gửi cookie
-  })
-);
-
-// ✅ Middleware cơ bản
-app.use(express.json());
-app.use(morgan("dev"));
 
 // ✅ Prefix routes
 
