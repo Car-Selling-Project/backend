@@ -15,11 +15,33 @@ const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%
 
 const minYear = dayjs().year() - 75;
 const maxYear = dayjs().year() - 18;
+function capitalizeWords(str) {
+  return str
+    .normalize('NFC')
+    .trim()
+    .split(/\s+/)
+    .map(word =>
+      word.charAt(0).toLocaleUpperCase('vi-VN') +
+      word.slice(1).toLocaleLowerCase('vi-VN')
+    )
+    .join(' ');
+}
+
 
 export const adminSchema = Joi.object({
-  name: Joi.string().pattern(nameRegex).required().messages({
+  name: Joi.string()
+  .required()
+  .custom((value, helpers) => {
+    const formatted = capitalizeWords(value);
+    if (!nameRegex.test(formatted)) {
+      return helpers.message(
+        'Name must start with capital letters and contain no numbers or special characters'
+      );
+    }
+    return formatted; // trả lại name đã chuẩn hóa
+  })
+  .messages({
     'string.empty': 'Name is required',
-    'string.pattern.base': 'Name must start with a capital letter, contain no numbers or special characters',
   }),
 email: Joi.string()
   .required()
