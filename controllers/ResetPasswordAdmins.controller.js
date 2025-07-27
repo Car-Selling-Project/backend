@@ -20,7 +20,7 @@ export const checkEmployeeCodeExists = async (req, res) => {
     // ✅ Lưu vào session
     req.session.employeeCode = employeeCode;
 
-    return res.status(200).json({ message: "Employee code exists" });
+    return res.status(200).json({ message: "Employee code verified. Redirect ..." });
   } catch (err) {
     console.error("Check Employee Code Error:", err);
     return res.status(500).json({ message: "Internal server error" });

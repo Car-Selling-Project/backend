@@ -20,7 +20,7 @@ export const checkEmailExists = async (req, res) => {
     // ✅ Lưu email vào session
     req.session.email = email;
 
-    return res.status(200).json({ message: "Email exists" });
+    return res.status(200).json({ message: "Email verified. Redirecting.." });
   } catch (err) {
     console.error("Check Email Error:", err);
     return res.status(500).json({ message: "Internal server error" });
