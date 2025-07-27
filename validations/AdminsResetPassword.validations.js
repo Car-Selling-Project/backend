@@ -1,26 +1,6 @@
 import Joi from "joi";
 
 const resetPasswordAdminSchema = Joi.object({
-  employeeCode: Joi.string()
-    .required()
-    .custom((value, helpers) => {
-      if (value.includes(" ")) {
-        return helpers.message("Employee code must not contain spaces");
-      }
-      if (value.includes("\n")) {
-        return helpers.message("Employee code must not contain new lines");
-      }
-      if (!/^AD\d{4}$/.test(value)) {
-        return helpers.message(
-          "Employee code must start with 'AD' followed by 4 digits (e.g., AD1234)"
-        );
-      }
-      return value;
-    })
-    .messages({
-      "string.empty": `"employeeCode" is required`,
-    }),
-
   password: Joi.string()
     .required()
     .min(5)
@@ -36,7 +16,7 @@ const resetPasswordAdminSchema = Joi.object({
         return helpers.message("Password must contain at least one number");
       }
       if (value.includes(";")) {
-        return helpers.message("Password must not contain the semicolon (;)");
+        return helpers.message("Password must not contain the semicolon (;)"); 
       }
       return value;
     })

@@ -3,7 +3,10 @@ import http from "http";
 import cors from "cors";
 import dotenv from "dotenv";
 import morgan from "morgan";
+import session from "express-session"; // ✅ Thêm session
 import connectDB from "./configs/connectdb.js";
+
+// ✅ Import route modules
 import RegisterCustomersRouter from "./routes/RegisterCustomers.routes.js";
 import LoginCustomersRouter from "./routes/LoginCustomers.routes.js";
 import RegisterAdminsRouter from "./routes/RegisterAdmins.routes.js";
@@ -11,11 +14,12 @@ import LoginAdminRouter from "./routes/LoginAdmin.routes.js";
 import resetPasswordCustomerRouter from "./routes/ResetPasswordCustomer.routes.js";
 import resetPasswordAdminRouter from "./routes/ResetPasswordAdmins.routes.js";
 
-dotenv.config(); // Load biến môi trường từ .env
+// ✅ Load biến môi trường từ .env
+dotenv.config();
 
 const app = express();
 
-// Kết nối MongoDB
+// ✅ Kết nối MongoDB
 connectDB()
   .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => {
@@ -23,10 +27,22 @@ connectDB()
     process.exit(1);
   });
 
-// ⚙️ Cấu hình CORS
-const allowedOrigins = [
-  "http://localhost:5173",
-];
+// ✅ Middleware session
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "your-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // set true nếu dùng HTTPS
+      httpOnly: true,
+      maxAge: 15 * 60 * 1000, // 15 phút
+    },
+  })
+);
+
+// ✅ Cấu hình CORS
+const allowedOrigins = ["http://localhost:5173"];
 
 app.use(
   cors({
@@ -37,30 +53,30 @@ app.use(
         callback(new Error("❌ Not allowed by CORS"));
       }
     },
-    credentials:true,
+    credentials: true, // ✅ Cho phép frontend gửi cookie
   })
 );
 
+// ✅ Middleware cơ bản
 app.use(express.json());
 app.use(morgan("dev"));
 
-// 📌 Prefix routes
-//routes customers
+// ✅ Prefix routes
+
+// Customers
 app.use("/customers", RegisterCustomersRouter);
 app.use("/customers", LoginCustomersRouter);
-app.use("/customers", resetPasswordCustomerRouter)
+app.use("/customers", resetPasswordCustomerRouter);
 
-
-
-//routes admin
+// Admins
 app.use("/admins", RegisterAdminsRouter);
 app.use("/admins", LoginAdminRouter);
-app.use("/admins", resetPasswordAdminRouter )
+app.use("/admins", resetPasswordAdminRouter);
 
-// ✅ Export app để test
+// ✅ Export app để dùng trong test
 export default app;
 
-// 🟢 Khởi chạy server nếu chạy trực tiếp (không khi import test)
+// ✅ Chạy server nếu không phải môi trường test
 if (process.env.NODE_ENV !== "test") {
   const server = http.createServer(app);
   const port = process.env.PORT || 5000;
