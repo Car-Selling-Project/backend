@@ -16,18 +16,32 @@ const validPhonePrefixes = [
 const nameRegex = /^[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯ][a-zàáâãèéêìíòóôõùúăđĩũơư]+(\s[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯ][a-zàáâãèéêìíòóôõùúăđĩũơư]+)*$/u;
 const phoneRegex = new RegExp(`^(${validPhonePrefixes.join('|')})\\d{7}$`);
 const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.*\d)(?!.*;)[A-Za-z\d!@#$%^&*]{5,32}$/;
-
-
+function capitalizeWords(str) {
+  return str
+    .normalize('NFC')
+    .trim()
+    .split(/\s+/)
+    .map(word =>
+      word.charAt(0).toLocaleUpperCase('vi-VN') +
+      word.slice(1).toLocaleLowerCase('vi-VN')
+    )
+    .join(' ');
+};
 
 export const customerSchema = Joi.object({
   name: Joi.string()
-    .pattern(nameRegex)
-    .max(100)
     .required()
+    .custom((value, helpers) => {
+      const formatted = capitalizeWords(value);
+      if (!nameRegex.test(formatted)) {
+        return helpers.message(
+          'Name must start with capital letters and contain no numbers or special characters'
+        );
+      }
+      return formatted; // trả lại name đã chuẩn hóa
+    })
     .messages({
       'string.empty': 'Name is required',
-      'string.pattern.base': 'Name must start with a capital letter, contain no numbers or special characters',
-      'string.max': 'Name must not exceed 100 characters'
     }),
 
 email: Joi.string()
