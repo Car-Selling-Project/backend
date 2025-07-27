@@ -12,7 +12,7 @@ import resetPasswordAdminSchema from "../validations/AdminsResetPassword.validat
 const resetPasswordAdminRouter = express.Router();
 
 resetPasswordAdminRouter.post(
-  "/check-employee-code",
+  "/forgot-password",
   validateRequest(checkEmployeeCodeSchema),
   checkEmployeeCodeExists
 );
