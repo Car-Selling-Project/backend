@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import morgan from "morgan";
 import session from "express-session"; // ✅ Thêm session
 import connectDB from "./configs/connectdb.js";
+import cloudinary from "./configs/cloudinary.config.js";
 
 // ✅ Import route modules
 import RegisterCustomersRouter from "./routes/RegisterCustomers.routes.js";

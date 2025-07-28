@@ -16,31 +16,25 @@ const loginAdminSchema = Joi.object({
     .pattern(employeeCodeRegex)
     .required()
     .messages({
-      "string.empty": "Employee code is required",
-      "string.pattern.base": "Employee code must start with 'AD' followed by 4 digits (e.g., AD1234)",
+      "string.empty": "Employee code or password is wrong",
+      "string.pattern.base": "Employee code or password is wrong",
     }),
 
   password: Joi.string()
     .pattern(passwordRegex)
     .required()
     .custom((value, helpers) => {
-      if (/\s/.test(value)) {
-        return helpers.error("any.invalid");
-      }
-      if (value.includes("\n")) {
-        return helpers.error("any.invalid");
-      }
-      if (/[;,]/.test(value)) {
-        return helpers.error("any.invalid");
-      }
+      if (/\s/.test(value)) return helpers.error("any.invalid");
+      if (value.includes("\n")) return helpers.error("any.invalid");
+      if (/[;,]/.test(value)) return helpers.error("any.invalid");
       return value;
-    }, "No spaces, newlines, or semicolon/comma")
+    }, "Custom password check")
     .messages({
-      "string.empty": "Password is required",
-      "string.pattern.base":
-        "Password must be 5–32 characters, include at least 1 uppercase letter, 1 digit, and 1 special character (excluding ; , .)",
-      "any.invalid": "Password must not contain whitespace, newline, or ; , . characters",
+      "string.empty": "Employee code or password is wrong",
+      "string.pattern.base": "Employee code or password is wrong",
+      "any.invalid": "Employee code or password is wrong",
     }),
 });
+
 
 export default loginAdminSchema;

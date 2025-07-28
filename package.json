@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.0",
@@ -31,6 +32,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
     "morgan": "^1.10.1",
+    "multer": "^2.0.2",
     "nodemon": "^3.1.10"
   },
   "devDependencies": {
