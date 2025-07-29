@@ -14,6 +14,7 @@
     "test:adminlogin": "jest tests/loginadmin.test.js",
     "test:resetpasswordcustomer": "jest tests/resetpasswordcustomers.test.js",
     "test:resetpasswordadmin": "jest tests/resetpasswordadmins.test.js",
+    "test:addcars": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/carcreate.test.js",
     "dev": "nodemon ./server.js",
     "start": "nodemon ./server.js"
   },

@@ -16,7 +16,7 @@ export const loginRateLimiter = rateLimit({
     };
   },
   handler: (req, res, next, options) => {
-    res.setHeader("Retry-After", 10 * 60); // 10 phút
+    res.setHeader("Retry-After", 5 * 60); // 5 phút
     res.status(options.statusCode).json(options.message(req, res));
   },
   skipSuccessfulRequests: false, // Tính cả login thành công

@@ -1,7 +1,7 @@
 import rateLimit from "express-rate-limit";
 export const registerRateLimiter = rateLimit({
     windowMs: 5*60*1000,
-    max:300,
+    max:5,
     standardHeaders: true,
     legacyHeaders: false,
     message: (req, res) => {
@@ -16,7 +16,7 @@ export const registerRateLimiter = rateLimit({
     },
     handler: (req , res , next , options) =>{
         // Chặn request và trả về lỗi
-        res.setHeader('Retry-After' , 10 * 60);
+        res.setHeader('Retry-After' , 5 * 60);
         res.status(options.statusCode).json(options.message(req, res));
     },
     skipSuccessfulRequests:false,

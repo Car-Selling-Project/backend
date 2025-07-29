@@ -14,6 +14,7 @@ import RegisterAdminsRouter from "./routes/RegisterAdmins.routes.js";
 import LoginAdminRouter from "./routes/LoginAdmin.routes.js";
 import resetPasswordCustomerRouter from "./routes/ResetPasswordCustomer.routes.js";
 import resetPasswordAdminRouter from "./routes/ResetPasswordAdmins.routes.js";
+import CRUDCarsRouter from "./routes/CRUDCar.routes.js";
 
 // ✅ Load biến môi trường từ .env
 dotenv.config();
@@ -73,6 +74,7 @@ app.use("/customers", resetPasswordCustomerRouter);
 app.use("/admins", RegisterAdminsRouter);
 app.use("/admins", LoginAdminRouter);
 app.use("/admins", resetPasswordAdminRouter);
+app.use("/admins" , CRUDCarsRouter)
 
 // ✅ Export app để dùng trong test
 export default app;
