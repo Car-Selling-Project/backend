@@ -33,6 +33,12 @@ const customerSchema = new mongoose.Schema({
     enum: ["male", "female", "other"],
     required: true,
   },
+favorites: {
+  type: [mongoose.Schema.Types.ObjectId],
+  ref: "Car",
+  default: []
+}
+
 }, {
   timestamps: true
 });
