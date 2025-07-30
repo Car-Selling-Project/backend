@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // Giới hạn: 10 requests / 5 phút
 export const createCarLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 phút
-  max: 20,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
