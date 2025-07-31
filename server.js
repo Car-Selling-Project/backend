@@ -16,6 +16,7 @@ import resetPasswordCustomerRouter from "./routes/ResetPasswordCustomer.routes.j
 import resetPasswordAdminRouter from "./routes/ResetPasswordAdmins.routes.js";
 import CRUDCarsRouter from "./routes/CRUDCar.routes.js";
 import HomepageCarRouter from "./routes/Homepage.routes.js"
+import FavoritesCarRouter from "./routes/CRUDFavorites.routes.js";
 // ✅ Load biến môi trường từ .env
 dotenv.config();
 
@@ -69,7 +70,8 @@ app.use(morgan("dev"));
 app.use("/customers", RegisterCustomersRouter);
 app.use("/customers", LoginCustomersRouter);
 app.use("/customers", resetPasswordCustomerRouter);
-app.use("/customers", HomepageCarRouter)
+app.use("/customers", HomepageCarRouter);
+app.use("/customers", FavoritesCarRouter);
 
 // Admins
 app.use("/admins", RegisterAdminsRouter);

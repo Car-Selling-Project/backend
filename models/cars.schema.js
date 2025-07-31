@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
-const carSchema = new mongoose.Schema({
+const CarSchema = new mongoose.Schema({
     title:{
         type:String,
-        required:true,
+        required:true
     },
     description:{
         type:String,
-        required:true,
+        required:true
     },
     brandId:{
         type:mongoose.Schema.Types.ObjectId,
@@ -14,40 +14,116 @@ const carSchema = new mongoose.Schema({
         required:true
     },
     locationId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Location"
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Location",
+        required:true
     },
     model:{
         type:String,
         required:true
     },
-    status:{
-        type:String,
-        enum:["unavailable", "available", "sold"],
-        default:"unavailable"
-    },
-    images:{
-        type:[String],
-        default:[],
+    price:{
+        type:Number,
         required:true
     },
-    averageRating:{
-        type:Number,
-        min:0,
-        max:5,
-        set: (val) => Math.round(val*10)/10,
-        default:0
+    fuelType:{
+        type:String,
+        enum:["Gasoline", "Diesel", "Electric", "Hybrid"],
+        required:true
     },
-    reviewCount:{
-        type: Number,
-        default:0,
+    tranmission:{
+        type:String,
+        enum:["Manual", "Automatic"],
+        required:true
+    },
+    seat:{
+        type:Number,
+        required:true,
+        min:2,
+        max:20
+    },
+    carType:{
+        type:String,
+        enum: ["Sedan", "SUV", "Hatchback", "Pickup", "MPV"],
+        required:true
+    },
+    exteriorColor:{
+        type:[String],
+        required:true
+    },
+    registrationYear:{
+        type:Number,
+        default: new Date().getFullYear(),
+        required:true,
+        min:1986
+    },
+    dimension:{
+        length:{
+            type:Number,
+            required:true,
+            min:0
+        },
+        width:{
+            type:Number,
+            required:true,
+            min:0
+        },
+        height:{
+            type:Number,
+            required:true,
+            min:0
+        }
+    },
+    engine:{
+        power:{
+            type:String,
+            required:true
+        },
+        fuelconsumsion:{
+            type:String,
+            required:true
+        }
+    },
+  images: {
+  type: [String],
+  required: true,
+  validate: {
+    validator: function (arr) {
+      return Array.isArray(arr) && arr.length > 0 && arr.length < 10;
+    },
+    message: "🚫 Images must contain between 1 and 9 items",
+  }
+},
+
+    stock:{
+        type:Number,
+        required:true,
         min:0,
         validate:{
             validator: Number.isInteger,
-            message:"reviewCount must be an integer"
-        },
+            message: "🚫 Stock must be an integer"
+        }
     },
-    createdBy:{
+    viewCount:{
+        type:Number,
+        default:0,
+        min:0,
+       set: val => Math.round(val * 10) / 10
+    },
+     rating:{
+        type:Number,
+        required:true,
+        min:1,
+        max:5,
+        set:val => Math.round(val * 10) / 10,
+        default:5
+    },
+    status:{
+        type:String,
+        enum:["active", "inactive"],
+        default: "inactive"
+    },
+    createBy:{
         type: mongoose.Schema.Types.ObjectId,
         ref:"Admin",
         required:true
@@ -57,5 +133,5 @@ const carSchema = new mongoose.Schema({
     timestamps:true
 },
 );
-const Car = mongoose.model("Car" , carSchema);
+const Car = mongoose.model("Car" , CarSchema);
 export default Car;

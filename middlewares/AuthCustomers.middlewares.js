@@ -9,17 +9,15 @@ export const authCustomer = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-  const decoded = jwt.verify(token, process.env.JWT_ACCESS_TOKEN); // ✅ đúng với login
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_TOKEN);
 
-
-    
-    const customer = await Customer.findById(decoded.customerId).select('-password');
+    const customer = await Customer.findById(decoded.id).select('-password'); // ⬅️ dùng decoded.id chứ không phải decoded.customerId
     if (!customer) {
       return res.status(404).json({ message: '❌ Customer not found' });
     }
 
-    req.customer = customer; 
-    next(); 
+    req.customer = customer;
+    next();
   } catch (error) {
     return res.status(401).json({ message: '❌ Invalid or expired token' });
   }

@@ -55,40 +55,46 @@ afterAll(async () => {
 
 
 describe('POST /admins/cars', () => {
-  it('✅ should create a car successfully with valid data', async () => {
-    const res = await request(app)
-      .post('/admins/cars')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .field('car', JSON.stringify({
-        title: 'Test Car',
-        description: 'A car for testing',
-        brandId: '60e8b5401c4ae72f884d97c1',
-        locationId: '60e8b5401c4ae72f884d97c2',
-        model: '2023'
-      }))
-      .field('engine', JSON.stringify({
-        fuelType: 'Gasoline',
-        gasoline: '95',
-        steering: 'Left',
-        power: '120HP'
-      }))
-      .field('dimension', JSON.stringify({
-        length: 3500,
-        width: 1800,
-        height: 1500,
-        cargoCapacity: 500
-      }))
-      .field('detail', JSON.stringify({
-        registrationYear: 2022,
-        type: 'SUV',
-        seat: 5,
-        exteriorColor: 'Black'
-      }))
-      .attach('images', path.resolve(__dirname, 'assets/test-car.jpg'));
+ it('✅ should create a car successfully with valid data', async () => {
+  const res = await request(app)
+    .post('/admins/cars')
+    .set('Authorization', `Bearer ${accessToken}`)
+    .field('car', JSON.stringify({
+      title: 'Test Car',
+      description: 'A car for testing',
+      brandId: '6887d1a6bbc50af2c6dfcfc3',
+      locationId: '688873eb60f99bf1dd49dc0f',
+      model: '2023'
+    }))
+    .field('engine', JSON.stringify({
+      fuelType: 'Gasoline',
+      gasoline: '95',
+      steering: 'Left',
+      power: '120HP'
+    }))
+    .field('dimension', JSON.stringify({
+      length: 3500,
+      width: 1800,
+      height: 1500,
+      cargoCapacity: 500
+    }))
+    .field('detail', JSON.stringify({
+      registrationYear: 2022,
+      type: 'SUV',
+      seat: 5,
+      exteriorColor: 'Black'
+    }))
+    .attach('images', path.resolve(__dirname, 'assets/test-car.jpg'));
 
-    expect(res.status).toBe(201);
-    expect(res.body.message).toMatch(/Car created successfully/i);
-  });
+  console.log("✅ Status:", res.status);
+  console.log("✅ Body:", res.body);
+
+  expect(res.status).toBe(201);
+  expect(res.body.message).toMatch(/Car created successfully/i);
+});
+
+
+
 
   it('❌ should fail if car.title is missing', async () => {
     const res = await request(app)
@@ -239,13 +245,15 @@ describe('POST /admins/cars', () => {
   });
 
   it('❌ should fail if all fields are missing', async () => {
-    const res = await request(app)
-      .post('/admins/cars')
-      .set('Authorization', `Bearer ${accessToken}`);
+  const res = await request(app)
+    .post('/admins/cars')
+    .set('Authorization', `Bearer ${accessToken}`)
+    .field('car', JSON.stringify({})); // giả vờ có "car" field nhưng rỗng
 
-    expect(res.status).toBe(400);
-    expect(res.body).toHaveProperty('errors');
-  });
+  expect(res.status).toBe(400);
+  expect(res.body).toHaveProperty('errors');
+});
+
   it('❌ should fail if engine.fuelType is missing', async () => {
     const res = await request(app)
       .post('/admins/cars')
@@ -617,25 +625,40 @@ describe('POST /admins/cars', () => {
   });
 
   it('❌ should fail if location does not exist in DB', async () => {
-    const nonExistentLocationId = '64f98f2e16a4c61b9e000001';
-    const res = await request(app)
-      .post('/admins/cars')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .field('car', JSON.stringify({
-        title: 'Test Car',
-        description: 'desc',
-        brandId: '60e8b5401c4ae72f884d97c1',
-        locationId: nonExistentLocationId,
-        model: '2023'
-      }))
-      .field('engine', JSON.stringify({ fuelType: 'Gasoline', gasoline: '95', steering: 'Left', power: '120HP' }))
-      .field('dimension', JSON.stringify({ length: 3500, width: 1800, height: 1500, cargoCapacity: 500 }))
-      .field('detail', JSON.stringify({ registrationYear: 2022, type: 'SUV', seat: 5, exteriorColor: 'Black' }))
-      .attach('images', path.resolve(__dirname, 'assets/test-car.jpg'));
+  const res = await request(app)
+    .post('/admins/cars')
+    .set('Authorization', `Bearer ${accessToken}`)
+    .field('car', JSON.stringify({
+      title: 'Test Car',
+      description: 'A car for testing',
+      brandId: '6887d1a6bbc50af2c6dfcfc3', // ✅ brandId đúng
+      locationId: '000000000000000000000000', // ❌ locationId không tồn tại
+      model: '2023'
+    }))
+    .field('engine', JSON.stringify({
+      fuelType: 'Gasoline',
+      gasoline: '95',
+      steering: 'Left',
+      power: '120HP'
+    }))
+    .field('dimension', JSON.stringify({
+      length: 3500,
+      width: 1800,
+      height: 1500,
+      cargoCapacity: 500
+    }))
+    .field('detail', JSON.stringify({
+      registrationYear: 2022,
+      type: 'SUV',
+      seat: 5,
+      exteriorColor: 'Black'
+    }))
+    .attach('images', path.resolve(__dirname, 'assets/test-car.jpg'));
 
-    expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/Invalid locationId/i);
-  });
+  expect(res.status).toBe(400);
+  expect(res.body.message).toMatch(/Invalid locationId/i);
+});
+
   it('❌ should fail if engine.fuelType is not a string', async () => {
     const res = await request(app)
       .post('/admins/cars')

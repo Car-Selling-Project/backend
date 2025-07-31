@@ -1,7 +1,12 @@
-// middlewares/validateRequest.js
 export const validateRequest = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body, { abortEarly: false });
+    // Clone lại để không ảnh hưởng req gốc
+    const body = { ...req.body };
+
+    // Nếu gửi multipart/form-data mà có images, ta xóa thủ công
+    delete body.images;
+
+    const { error } = schema.validate(body, { abortEarly: false });
 
     if (error) {
       const errorDetails = error.details.map(err => ({
