@@ -1,11 +1,12 @@
 import express from "express";
-import { createCar } from "../controllers/Cars.controller.js";
+import { createCar ,getAllCars,getCarById,updateCarById } from "../controllers/Cars.controller.js";
 import { authAdmin } from "../middlewares/AuthAdmins.middlewares.js";
 import {createCarLimiter} from "../middlewares/CreateCarlimiter.middlewares.js";
 import {validateRequest} from "../middlewares/validateRequest.middlewares.js";
 import {upload} from "../middlewares/Upload.middlewares.js";
 import { createCarSchema } from "../validations/CreateCar.validations.js";
 import { handleImageUpload } from "../middlewares/HandleImageUpload.js";
+import { updateCarSchema } from "../validations/UpdateCar.validations.js";
 const CRUDCarsRouter= express.Router();
 CRUDCarsRouter.post(
   "/cars",
@@ -16,4 +17,7 @@ CRUDCarsRouter.post(
   validateRequest(createCarSchema),
   createCar
 );
+CRUDCarsRouter.get("/cars", getAllCars );
+CRUDCarsRouter.patch("/cars/:id", authAdmin, upload.array("images", 10) , handleImageUpload, validateRequest(updateCarSchema) , updateCarById);
+CRUDCarsRouter.get("/cars/:id" , getCarById)
 export default CRUDCarsRouter;
