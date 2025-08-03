@@ -3,12 +3,14 @@ import Car from "../models/cars.schema.js";
 export const getHomepageCars = async (req, res) => {
   try {
     const popularCars = await Car.find({ 
-        status: "active", 
-        averageRating: { $gte: 4, $lte: 5 } 
-      })
-      .sort({ viewCount: -1, rating: -1 })
-      .limit(4)
-      .populate("brandId locationId");
+  status: "active", 
+  rating: 5 
+})
+.sort({ viewCount: -1 }) 
+.limit(4)
+.populate("brandId", "name")
+.populate("locationId", "name");
+
 
     const recommendedCars = await Car.aggregate([
       {
