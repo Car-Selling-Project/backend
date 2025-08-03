@@ -141,6 +141,12 @@ export const getAllCars = async (req, res) => {
     } = req.query;
 
     const query = {};
+  if (req.query.model) {
+  const models = req.query.model.split(",");
+  query.model = { $in: models };
+}
+
+
 
     if (brandIds) query.brandId = { $in: brandIds.split(",") };
     if (locationIds) query.locationId = { $in: locationIds.split(",") };
@@ -298,6 +304,6 @@ export const deleteCarByid = async(req , res) => {
     return res.status(500).json({
       message: "🚫 Internal Server Error",
       error: error.message,
-    });
+    })
   }
-};
+}
