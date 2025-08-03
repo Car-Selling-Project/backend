@@ -173,10 +173,14 @@ export const getAllCars = async (req, res) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [cars, total] = await Promise.all([
-      Car.find(query).skip(skip).limit(Number(limit)),
-      Car.countDocuments(query),
-    ]);
+  const [cars, total] = await Promise.all([
+  Car.find(query)
+    .skip(skip)
+    .limit(Number(limit))
+    .populate("brandId", "name-_id")        // chỉ lấy trường `name` từ Brand
+    .populate("locationId", "name-_id"),    // chỉ lấy trường `location` từ Location
+  Car.countDocuments(query),
+]);
 
     res.status(200).json({
       message: "✅ Get cars successfully",
@@ -236,10 +240,15 @@ export const updateCarById = async (req, res) => {
       return res.status(404).json({ message: "🚫 Car not found" });
     }
 
-    res.status(200).json({
-      message: "✅ Car updated successfully",
-      car: updatedCar,
-    });
+    const populatedCar = await Car.findById(id)
+  .populate("brandId", "name-_id")
+  .populate("locationId", "name-_id");
+
+res.status(200).json({
+  message: "✅ Car updated successfully",
+  car: populatedCar,
+});
+
   } catch (error) {
     res.status(500).json({
       message: "🚫 Failed to update car",
@@ -251,7 +260,10 @@ export const getCarById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const car = await Car.findById(id);
+    const car = await Car.findById(id)
+  .populate("brandId", "name-_id")
+  .populate("locationId", "name-_id");
+
 
     if (!car) {
       return res.status(404).json({
