@@ -44,11 +44,11 @@ export const createCarSchema = Joi.object({
     "any.required": "🚫 Transmission is required"
   }),
 
-  seat: Joi.number().integer().min(2).max(20).required().messages({
+  seat: Joi.number().integer().min(2).max(7).required().messages({
     "any.required": "🚫 Seat count is required",
     "number.base": "🚫 Seat must be a number",
     "number.min": "🚫 Must have at least 2 seats",
-    "number.max": "🚫 Must have at most 20 seats",
+    "number.max": "🚫 Must have at most 7 seats",
     "number.integer": "🚫 Seat must be an integer"
   }),
 

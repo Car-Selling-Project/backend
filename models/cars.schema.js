@@ -40,7 +40,11 @@ const CarSchema = new mongoose.Schema({
         type:Number,
         required:true,
         min:2,
-        max:20
+        max:7,
+        validate:{
+            validator: Number.isInteger,
+            message: "🚫 Seat must be an integer"
+        }
     },
     carType:{
         type:String,
