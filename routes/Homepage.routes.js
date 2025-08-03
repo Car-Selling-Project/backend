@@ -1,5 +1,6 @@
 import express from "express";
-import { getHomepageCars } from "../controllers/HomepageCar.controller.js";
+import { getPopularCars, getRecommendedCars } from "../controllers/HomepageCar.controller.js";
 const HomepageCarRouter = express.Router();
-HomepageCarRouter.get("/", getHomepageCars);
+HomepageCarRouter.get("/popularcars", getPopularCars);
+HomepageCarRouter.get("/recommendcars" , getRecommendedCars)
 export default HomepageCarRouter;
