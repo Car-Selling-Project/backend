@@ -24,7 +24,12 @@ const CarSchema = new mongoose.Schema({
     },
     price:{
         type:Number,
-        required:true
+        required:true,
+        max:300000,
+        validate:{
+            validator:Number.isInteger,
+            message: "🚫 price must be an integer"
+        }
     },
     fuelType:{
         type:String,

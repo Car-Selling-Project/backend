@@ -19,6 +19,8 @@ import HomepageCarRouter from "./routes/Homepage.routes.js"
 import FavoritesCarRouter from "./routes/CRUDFavorites.routes.js";
 import CarRouter from "./routes/Cars.routes.js";
 import CompareCarRouter from "./routes/CompareCars.routes.js";
+import DashboardStatRouter from "./routes/DashBoardStat.routes.js";
+import OrderRouter from "./routes/Orders.routes.js";
 // ✅ Load biến môi trường từ .env
 dotenv.config();
 
@@ -81,7 +83,9 @@ app.use("/customers" , CompareCarRouter);
 app.use("/admins", RegisterAdminsRouter);
 app.use("/admins", LoginAdminRouter);
 app.use("/admins", resetPasswordAdminRouter);
-app.use("/admins" , CRUDCarsRouter)
+app.use("/admins" , CRUDCarsRouter);
+app.use("/admins" , DashboardStatRouter);
+app.use("/admins", OrderRouter);
 
 // ✅ Export app để dùng trong test
 export default app;

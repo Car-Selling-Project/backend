@@ -28,10 +28,13 @@ export const createCarSchema = Joi.object({
     "string.empty": "🚫 Model cannot be empty"
   }),
 
-  price: Joi.number().min(0).required().messages({
+  price: Joi.number().min(0).max(300000).integer().required().messages({
     "any.required": "🚫 Price is required",
     "number.base": "🚫 Price must be a number",
-    "number.min": "🚫 Price must be at least 0"
+    "number.min": "🚫 Price must be at least 0",
+    "number.max":"🚫 Price must be at max 300.000",
+    "number.integer":"🚫 Price must be an interger"
+
   }),
 
   fuelType: Joi.string().valid("Gasoline", "Diesel", "Electric", "Hybrid").required().messages({
