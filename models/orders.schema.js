@@ -1,17 +1,17 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-  customerId: {
+  admin: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Customer",
+    ref: "Admin",
     required: true
   },
-  carId: {
+  carInfo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Car",
     required: true
   },
-  locationId: {
+  location: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Location",
     required: true
@@ -38,6 +38,11 @@ const orderSchema = new mongoose.Schema({
       validator: Number.isInteger,
       message: "🚫 totalPrice must be an integer"
     }
+  },
+  customerId:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:'Customer',
+    required:true
   },
   customerInfo: {
     fullName: { type: String, required: true },

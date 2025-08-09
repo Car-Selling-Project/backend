@@ -23,21 +23,14 @@ const noWhitespace = (fieldName) => (value, helpers) => {
 };
 
 const updateOrderValidationSchema = Joi.object({
-  customerId: Joi.string()
-    .hex()
-    .custom(noWhitespace('Customer ID'))
-    .messages({
-      'string.hex': 'Customer ID must be a valid hex string'
-    }),
-
-  carId: Joi.string()
+  carInfo: Joi.string()
     .hex()
     .custom(noWhitespace('Car ID'))
     .messages({
       'string.hex': 'Car ID must be a valid hex string'
     }),
 
-  locationId: Joi.string()
+  location: Joi.string()
     .hex()
     .custom(noWhitespace('Location ID'))
     .messages({
@@ -49,7 +42,12 @@ const updateOrderValidationSchema = Joi.object({
   paymentMethod: Joi.string().valid('cash', 'bank_transfer', 'loan'),
 
   totalPrice: Joi.number().integer().min(0),
-
+  customerId:Joi.string()
+    .hex()
+    .custom(noWhitespace('Customer ID'))
+    .messages({
+      'string.hex': 'Customer ID must be a valid hex string'
+    }),
   customerInfo: Joi.object({
     fullName: Joi.string()
       .custom(noWhitespace('Full name'))
