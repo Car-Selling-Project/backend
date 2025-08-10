@@ -72,12 +72,4 @@ export const transactionValidationSchema = Joi.object({
   transactionCode: Joi.string().allow("").optional(),
   status: Joi.string().valid("success", "failed", "pending").optional(),
   receiptUrl: Joi.string().uri().allow("").optional(),
-  confirmBy: Joi.string()
-    .required()
-    .custom((value, helpers) => {
-      if (!Joi.string().regex(/^[0-9a-fA-F]{24}$/).validate(value).error) {
-        return value;
-      }
-      return helpers.message("confirmBy must be a valid ObjectId");
-    }),
 });

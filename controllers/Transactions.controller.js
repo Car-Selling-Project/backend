@@ -1,27 +1,35 @@
 import Transaction from "../models/transactions.schema.js";
-export const getRecentTransactions = async(req , res) => {
-    try{
-        const transactions = await Transaction.find()
-        .sort({createAt : -1})
-        .limit(10)
-        .populate("order")
-        .populate("customerId" , "name")
-        .populate("confirmBy" , "name");
-        res.status(200).json({
-             message: "✅ Recent transactions fetched successfully",
-             data:transactions
-        });
-    }catch(error){
-        console.error("❌ Error fetching recent transactions:", error);
-        res.status(500).json({
-            message: "❌ Failed to fetch recent transactions",
-        });
-    }
-}
+
+// Lấy 10 giao dịch gần nhất
+export const getRecentTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("order")
+      .populate("customerId", "name")
+      .populate("confirmBy", "name");
+
+    res.status(200).json({
+      message: "✅ Recent transactions fetched successfully",
+      data: transactions
+    });
+  } catch (error) {
+    console.error("❌ Error fetching recent transactions:", error);
+    res.status(500).json({
+      message: "❌ Failed to fetch recent transactions",
+    });
+  }
+};
 
 // CREATE transaction
 export const createTransaction = async (req, res) => {
   try {
+    // Gán confirmBy từ admin middleware
+    if (req.admin && req.admin._id) {
+      req.body.confirmBy = req.admin._id;
+    }
+
     const newTransaction = await Transaction.create(req.body);
 
     const populated = await Transaction.findById(newTransaction._id)
@@ -34,6 +42,7 @@ export const createTransaction = async (req, res) => {
       data: populated
     });
   } catch (error) {
+    console.error("❌ Error creating transaction:", error);
     res.status(500).json({
       message: "❌ Failed to create transaction",
       error: error.message
@@ -53,7 +62,7 @@ export const getAllTransactions = async (req, res) => {
 
     const transactions = await Transaction.find(filter)
       .sort({ createdAt: -1 })
-      .populate("order")               // populate theo trường mới
+      .populate("order")
       .populate("customerId", "name")
       .populate("confirmBy", "name");
 
