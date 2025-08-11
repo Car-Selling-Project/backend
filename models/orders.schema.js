@@ -20,14 +20,14 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0,
-    validate:{
-        validator: Number.isInteger,
-        message: "🚫 deposit must be an integer"
+    validate: {
+      validator: Number.isInteger,
+      message: "🚫 deposit must be an integer"
     }
   },
-  paymentMethod:{
-    type:String,
-    enum:["cash", "bank_transfer", "loan"],
+  paymentMethod: {
+    type: String,
+    enum: ["cash", "bank_transfer", "loan"],
     default: "cash"
   },
   totalPrice: {
@@ -39,26 +39,29 @@ const orderSchema = new mongoose.Schema({
       message: "🚫 totalPrice must be an integer"
     }
   },
-  customerId:{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:'Customer',
-    required:true
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Customer",
+    required: true
   },
   customerInfo: {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },      
     email: { type: String, required: true },
-    citizenId: { type: String, required: true},  
+    citizenId: { type: String, required: true },  
     address: { type: String, required: true }
   },
   contract: {
-    contract: {
-  url: { type: String },
-  signed: { type: Boolean, default: false },
-  signerName: { type: String },
-  signDate: { type: Date }
-}
+    url: { type: String },
+    signed: { type: Boolean, default: false },
 
+    signedBySeller: { type: Boolean, default: false },
+    signedBySellerName: { type: String },
+    signedBySellerAt: { type: Date },
+
+    signedByBuyer: { type: Boolean, default: false },
+    signedByBuyerName: { type: String },
+    signedByBuyerAt: { type: Date }
   },
   status: {
     type: String,

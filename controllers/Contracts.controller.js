@@ -1,8 +1,22 @@
 import Order from "../models/orders.schema.js";
-import {uploadToCloudinary} from "../configs/cloudinary.config.js"
+import { uploadToCloudinary } from "../configs/cloudinary.config.js";
 import path from "path";
-import PDFDocument from "pdfkit-table";
-// Ký hợp đồng bên Seller (Admin)
+import PdfPrinter from "pdfmake/src/printer.js";
+
+// ====== FONT CONFIG (Roboto supports full Vietnamese charset) ======
+const fontRegular = path.join(process.cwd(), "fonts", "Roboto-VariableFont_wdth,wght.ttf");
+const fontItalic = path.join(process.cwd(), "fonts", "Roboto-Italic-VariableFont_wdth,wght.ttf");
+
+const fonts = {
+  Roboto: {
+    normal: fontRegular,
+    bold: fontRegular, // pdfmake applies weight automatically when bold: true
+    italics: fontItalic,
+    bolditalics: fontItalic,
+  },
+};
+
+// ====== SIGN CONTRACT BY SELLER ======
 export const signContractSeller = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -32,10 +46,10 @@ export const signContractSeller = async (req, res) => {
   }
 };
 
+// ====== GET CONTRACT STATUS ======
 export const getContractStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-
     const order = await Order.findById(orderId, "contract");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
@@ -45,14 +59,25 @@ export const getContractStatus = async (req, res) => {
   }
 };
 
-const fontRegular = path.join(process.cwd(), "fonts", "TIMES.TTF");
-const fontBold = path.join(process.cwd(), "fonts", "TIMESBD.TTF");
+function makeTable(rows) {
+  return {
+    table: {
+      widths: [150, "*"],
+      body: [
+        [{ text: "Field", bold: true }, { text: "Value", bold: true }],
+        ...rows,
+      ],
+    },
+    margin: [0, 0, 0, 10],
+  };
+}
 
-export const generateAndUploadContract = async (req, res) => {
+export const createContract = async (req, res) => {
   try {
-    const { orderId, signerName, signDate } = req.body;
-    if (!orderId || !signerName || !signDate) {
-      return res.status(400).json({ message: "Missing required fields" });
+    const { orderId } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Missing required field: orderId" });
     }
 
     const order = await Order.findById(orderId)
@@ -60,139 +85,113 @@ export const generateAndUploadContract = async (req, res) => {
         path: "carInfo",
         populate: { path: "brandId", select: "name" },
       })
-      .populate("customerInfo", "fullName email phone address citizenId")
-      .populate("admin", "name phone email");
+      .populate("admin", "name phone email")
+      .populate("customerId");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
-    doc.registerFont("Times-Regular", fontRegular);
-    doc.registerFont("Times-Bold", fontBold);
+    if (order.contract && order.contract.url) {
+      return res.status(400).json({ message: "Contract already exists" });
+    }
 
-    let buffers = [];
-    doc.on("data", buffers.push.bind(buffers));
-    const pdfEndPromise = new Promise((resolve) =>
-      doc.on("end", () => resolve(Buffer.concat(buffers)))
-    );
+    const printer = new PdfPrinter(fonts);
 
-    // Tùy chọn bảng chung
-    const defaultTableOpts = {
-      hideHeader: true,
-      columnWidths: [150, 350],
-      prepareRow: (row, i) => doc.font("Times-Regular").fontSize(12),
-    };
-
-    // ===== HEADER =====
-    doc.font("Times-Bold").fontSize(22).fillColor("#2C3E50")
-      .text("SALE CONTRACT", { align: "center", underline: true });
-    doc.moveDown(0.5);
-    doc.font("Times-Regular").fontSize(12).fillColor("#555")
-      .text(`Contract Date: ${new Date(signDate).toLocaleDateString()}`, { align: "center" });
-    doc.moveDown(1);
-
-    // ===== SELLER INFO =====
-    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Seller Information");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
-    doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Name", order.admin?.name || ""],
-        ["Phone", order.admin?.phone || ""],
-        ["Email", order.admin?.email || ""],
-      ],
-      ...defaultTableOpts
-    });
-    doc.moveDown(1);
-
-    // ===== BUYER INFO =====
     const buyer = order.customerInfo;
-    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Buyer Information");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
-    doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Name", buyer.fullName || ""],
-        ["Email", buyer.email || ""],
-        ["Phone", buyer.phone || ""],
-        ["Address", buyer.address || ""],
-        ["Citizen ID", buyer.citizenId || ""],
-      ],
-      ...defaultTableOpts
-    });
-    doc.moveDown(1);
-
-    // ===== CAR INFO =====
     const car = order.carInfo;
-    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Car Information");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
-    doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Title", car.title || ""],
-        ["Brand", car.brandId?.name || ""],
-        ["Model", car.model || ""],
-        ["Type", car.carType || ""],
-        ["Color", Array.isArray(car.exteriorColor) ? car.exteriorColor.join(", ") : ""],
+
+    const contractDate = new Date().toLocaleDateString("en-US");
+
+    const docDefinition = {
+      defaultStyle: { font: "Roboto" },
+      content: [
+        {
+          text: "SALE CONTRACT",
+          style: "header",
+          alignment: "center",
+          decoration: "underline",
+        },
+        {
+          text: `Contract Date: ${contractDate}`,
+          alignment: "center",
+          margin: [0, 5, 0, 15],
+        },
+
+        { text: "Seller Information", style: "sectionHeader" },
+        makeTable([
+          ["Name", order.admin?.name || ""],
+          ["Phone", order.admin?.phone || ""],
+          ["Email", order.admin?.email || ""],
+        ]),
+
+        { text: "Buyer Information", style: "sectionHeader" },
+        makeTable([
+          ["Name", buyer.fullName || ""],
+          ["Email", buyer.email || ""],
+          ["Phone", buyer.phone || ""],
+          ["Address", buyer.address || ""],
+          ["Citizen ID", buyer.citizenId || ""],
+        ]),
+
+        { text: "Car Information", style: "sectionHeader" },
+        makeTable([
+          ["Title", car.title || ""],
+          ["Brand", car.brandId?.name || ""],
+          ["Model", car.model || ""],
+          ["Type", car.carType || ""],
+          [
+            "Color",
+            Array.isArray(car.exteriorColor)
+              ? car.exteriorColor.join(", ")
+              : car.exteriorColor || "",
+          ],
+        ]),
+
+        { text: "Sale Details", style: "sectionHeader" },
+        makeTable([["Total Price", `$${order.totalPrice.toFixed(2)}`]]),
+
+        { text: "Signatures", style: "sectionHeader" },
+        {
+          columns: [
+            { text: `\n\nSeller Signature\n\n____________________`, width: "50%" },
+            { text: `\n\nBuyer Signature\n\n____________________`, width: "50%" },
+          ],
+        },
       ],
-      ...defaultTableOpts
-    });
-    doc.moveDown(1);
-
-    // ===== SALE DETAILS =====
-    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Sale Details");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
-    doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Total Price", `$${order.totalPrice.toFixed(2)}`],
-      ],
-      ...defaultTableOpts
-    });
-    doc.moveDown(1);
-
-    // ===== SIGNATURE =====
-    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Signature");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
-    doc.moveDown(2);
-
-    // Seller signature box
-    doc.font("Times-Regular").fontSize(12).text("Seller Signature", 100, doc.y, { align: "left" });
-    doc.moveDown(3);
-    doc.moveTo(80, doc.y).lineTo(220, doc.y).strokeColor("#000").stroke();
-
-    // Buyer signature box
-    const buyerX = 350;
-    doc.font("Times-Regular").fontSize(12).text("Buyer Signature", buyerX, doc.y - 60, { align: "left" });
-    doc.moveDown(3);
-    doc.moveTo(buyerX, doc.y).lineTo(buyerX + 140, doc.y).strokeColor("#000").stroke();
-
-    doc.end();
-
-    const pdfBuffer = await pdfEndPromise;
-
-    // Upload
-    const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
-
-    // Save DB
-    order.contract = {
-      url: pdfUrl,
-      signed: true,
-      signedBySeller: true,
-      signedBySellerName: signerName,
-      signedBySellerAt: new Date(signDate),
+      styles: {
+        header: { fontSize: 22, bold: true },
+        sectionHeader: { fontSize: 14, bold: true, margin: [0, 15, 0, 5] },
+      },
     };
-    await order.save();
 
-    res.json({
-      message: "Contract generated and uploaded successfully",
-      contractUrl: pdfUrl,
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    let chunks = [];
+    pdfDoc.on("data", (chunk) => chunks.push(chunk));
+    pdfDoc.on("end", async () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
+
+      order.contract = {
+        url: pdfUrl,
+        signedBySeller: false,
+        signedBySellerName: null,
+        signedBySellerAt: null,
+        signedByBuyer: false,
+        signedByBuyerName: null,
+        signedByBuyerAt: null,
+        signed: false,
+      };
+
+      await order.save();
+
+      res.json({
+        message: "Contract created successfully (unsigned)",
+        contractUrl: pdfUrl,
+        contract: order.contract,
+      });
     });
+    pdfDoc.end();
   } catch (error) {
-    console.error("Error generating contract:", error);
+    console.error("Error creating contract:", error);
     res.status(500).json({ message: "Server error", error });
   }
 };

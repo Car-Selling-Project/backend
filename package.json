@@ -38,6 +38,7 @@
     "nodemon": "^3.1.10",
     "pdfkit": "^0.17.1",
     "pdfkit-table": "^0.1.99",
+    "pdfmake": "^0.2.20",
     "streamifier": "^0.1.1",
     "tslib": "^2.8.1"
   },
