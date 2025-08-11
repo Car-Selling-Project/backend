@@ -78,7 +78,7 @@ export const generateAndUploadContract = async (req, res) => {
     // Tùy chọn bảng chung
     const defaultTableOpts = {
       hideHeader: true,
-      columnWidths: [150, 350],
+      columnsSize: [150, 350],
       prepareRow: (row, i) => doc.font("Times-Regular").fontSize(12),
     };
 
@@ -94,15 +94,16 @@ export const generateAndUploadContract = async (req, res) => {
     doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Seller Information");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Name", order.admin?.name || ""],
-        ["Phone", order.admin?.phone || ""],
-        ["Email", order.admin?.email || ""],
-      ],
-      ...defaultTableOpts
-    });
+    await doc.table(
+      {
+        rows: [
+          ["Name", order.admin?.name || ""],
+          ["Phone", order.admin?.phone || ""],
+          ["Email", order.admin?.email || ""],
+        ],
+      },
+      defaultTableOpts
+    );
     doc.moveDown(1);
 
     // ===== BUYER INFO =====
@@ -110,17 +111,18 @@ export const generateAndUploadContract = async (req, res) => {
     doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Buyer Information");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Name", buyer.fullName || ""],
-        ["Email", buyer.email || ""],
-        ["Phone", buyer.phone || ""],
-        ["Address", buyer.address || ""],
-        ["Citizen ID", buyer.citizenId || ""],
-      ],
-      ...defaultTableOpts
-    });
+    await doc.table(
+      {
+        rows: [
+          ["Name", buyer.fullName || ""],
+          ["Email", buyer.email || ""],
+          ["Phone", buyer.phone || ""],
+          ["Address", buyer.address || ""],
+          ["Citizen ID", buyer.citizenId || ""],
+        ],
+      },
+      defaultTableOpts
+    );
     doc.moveDown(1);
 
     // ===== CAR INFO =====
@@ -128,30 +130,30 @@ export const generateAndUploadContract = async (req, res) => {
     doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Car Information");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Title", car.title || ""],
-        ["Brand", car.brandId?.name || ""],
-        ["Model", car.model || ""],
-        ["Type", car.carType || ""],
-        ["Color", Array.isArray(car.exteriorColor) ? car.exteriorColor.join(", ") : ""],
-      ],
-      ...defaultTableOpts
-    });
+    await doc.table(
+      {
+        rows: [
+          ["Title", car.title || ""],
+          ["Brand", car.brandId?.name || ""],
+          ["Model", car.model || ""],
+          ["Type", car.carType || ""],
+          ["Color", Array.isArray(car.exteriorColor) ? car.exteriorColor.join(", ") : ""],
+        ],
+      },
+      defaultTableOpts
+    );
     doc.moveDown(1);
 
     // ===== SALE DETAILS =====
     doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Sale Details");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    await doc.table({
-      headers: [],
-      rows: [
-        ["Total Price", `$${order.totalPrice.toFixed(2)}`],
-      ],
-      ...defaultTableOpts
-    });
+    await doc.table(
+      {
+        rows: [["Total Price", `$${order.totalPrice.toFixed(2)}`]],
+      },
+      defaultTableOpts
+    );
     doc.moveDown(1);
 
     // ===== SIGNATURE =====
