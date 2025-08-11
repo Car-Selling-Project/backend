@@ -77,6 +77,7 @@ export const generateAndUploadContract = async (req, res) => {
 
     // Tùy chọn bảng chung
     const defaultTableOpts = {
+      // Keep this true if supported; otherwise headers will render but are harmless
       hideHeader: true,
       columnsSize: [150, 350],
       prepareRow: (row, i) => doc.font("Times-Regular").fontSize(12),
@@ -96,6 +97,7 @@ export const generateAndUploadContract = async (req, res) => {
     doc.moveDown(0.5);
     await doc.table(
       {
+        headers: ["Field", "Value"],
         rows: [
           ["Name", order.admin?.name || ""],
           ["Phone", order.admin?.phone || ""],
@@ -113,6 +115,7 @@ export const generateAndUploadContract = async (req, res) => {
     doc.moveDown(0.5);
     await doc.table(
       {
+        headers: ["Field", "Value"],
         rows: [
           ["Name", buyer.fullName || ""],
           ["Email", buyer.email || ""],
@@ -132,6 +135,7 @@ export const generateAndUploadContract = async (req, res) => {
     doc.moveDown(0.5);
     await doc.table(
       {
+        headers: ["Field", "Value"],
         rows: [
           ["Title", car.title || ""],
           ["Brand", car.brandId?.name || ""],
@@ -150,6 +154,7 @@ export const generateAndUploadContract = async (req, res) => {
     doc.moveDown(0.5);
     await doc.table(
       {
+        headers: ["Field", "Value"],
         rows: [["Total Price", `$${order.totalPrice.toFixed(2)}`]],
       },
       defaultTableOpts
