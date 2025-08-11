@@ -45,8 +45,8 @@ export const getContractStatus = async (req, res) => {
   }
 };
 
-const fontRegular = path.join(process.cwd(), "fonts", "Roboto-Regular.ttf");
-const fontBold = path.join(process.cwd(), "fonts", "Roboto-Bold.ttf");
+const fontRegular = path.join(process.cwd(), "fonts", "TIMES.TTF");
+const fontBold = path.join(process.cwd(), "fonts", "TIMESBD.TTF");
 
 export const generateAndUploadContract = async (req, res) => {
   try {
@@ -136,7 +136,7 @@ export const generateAndUploadContract = async (req, res) => {
     const pdfBuffer = await pdfEndPromise;
 
     // Upload
-    const pdfUrl = await uploadContractToCloudinary({ buffer: pdfBuffer });
+    const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
 
     // Save DB
     order.contract = {
