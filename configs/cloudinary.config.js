@@ -30,5 +30,20 @@ export const uploadToCloudinary = (file, folder = 'vehicles') => {
     stream.end(file.buffer);
   });
 };
+export const uploadContractToCloudinary = (file) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'contracts', resource_type: 'raw' }, // raw để upload pdf, doc, ...
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
+        return resolve(result.secure_url);
+      }
+    );
+
+    stream.end(file.buffer);
+  });
+};
 
 export default cloudinary;

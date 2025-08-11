@@ -52,8 +52,13 @@ const orderSchema = new mongoose.Schema({
     address: { type: String, required: true }
   },
   contract: {
-    url: { type: String },
-    signed: { type: Boolean, default: false }
+    contract: {
+  url: { type: String },
+  signed: { type: Boolean, default: false },
+  signerName: { type: String },
+  signDate: { type: Date }
+}
+
   },
   status: {
     type: String,

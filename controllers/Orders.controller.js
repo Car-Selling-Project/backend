@@ -1,5 +1,5 @@
 import Order from "../models/orders.schema.js";
-
+import Car from "../models/cars.schema.js";
 export const createOrder = async (req, res) => {
   try {
     const adminId = req.admin?._id;
@@ -21,8 +21,8 @@ export const createOrder = async (req, res) => {
     return res.status(201).json({
       message: "✅ Order created successfully",
       data: populatedOrder,
-      customer: populatedOrder.customerId // trả riêng phần customerId info cho frontend nếu cần
-        ? { id: populatedOrder.customerId._id, name: populatedOrder.customerId.fullName }
+      customer: populatedOrder.customerId
+        ? { id: populatedOrder.customerId._id, name: populatedOrder.customerId.name }
         : null,
     });
   } catch (error) {
@@ -116,7 +116,7 @@ export const updateOrderById = async (req, res) => {
       .populate("admin", "name")
       .populate("carInfo", "-locationId")
       .populate("location", "name")
-      .populate("customerId", "_id fullName");  // Thêm customerId
+      .populate("customerId", "name"); 
 
     if (!updatedOrder) {
       return res.status(404).json({
@@ -156,3 +156,55 @@ export const deleteOrderById = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete order", error: error.message });
   }
 };
+export const confirmOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.status !== "pending") return res.status(400).json({ message: "Order is not in pending status" });
+    if (!order.contract?.url) return res.status(400).json({ message: "Contract file is missing" });
+    if (!order.contract?.signed) return res.status(400).json({ message: "Contract must be signed before confirmation" });
+
+    // Cập nhật trạng thái đơn
+    order.status = "confirmed";
+    await order.save();
+
+    // Trừ stock xe
+    const carId = order.carInfo;
+    const car = await Car.findById(carId);
+    if (!car) {
+      return res.status(404).json({ message: "Car not found" });
+    }
+    
+    if (car.stock <= 0) {
+      return res.status(400).json({ message: "Car is out of stock" });
+    }
+
+    car.stock = car.stock - 1;
+    await car.save();
+
+    return res.json({
+      message: "✅ Order confirmed successfully and stock updated",
+      order,
+      car
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
+export const canceledOrder = async(req, res) => {
+  try{
+    const {id} = req.params;
+    const order = await Order.findById(id);
+    if(!order)  return res.status(404).json({ message: "Order not found" });
+    if(order.status != "pending") return res.status(400).json({ message: "Only pending orders can be canceled" });
+    order.status = "canceled";
+    await  order.save();
+    res.status(201).json({
+       message: "🚫 Order canceled successfully",
+       order
+    });
+  }catch(error){
+     return res.status(500).json({ message: "Server error", error });
+  }
+}
