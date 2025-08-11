@@ -1,7 +1,7 @@
 import Order from "../models/orders.schema.js";
-import PDFDocument from "pdfkit";
 import {uploadToCloudinary} from "../configs/cloudinary.config.js"
 import path from "path";
+import PDFDocument from "pdfkit-table";
 // Ký hợp đồng bên Seller (Admin)
 export const signContractSeller = async (req, res) => {
   try {
@@ -61,78 +61,117 @@ export const generateAndUploadContract = async (req, res) => {
         populate: { path: "brandId", select: "name" },
       })
       .populate("customerInfo", "fullName email phone address citizenId")
-      .populate("admin", "name");
+      .populate("admin", "name phone email");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const doc = new PDFDocument({ size: "A4", margin: 50 });
+    doc.registerFont("Times-Regular", fontRegular);
+    doc.registerFont("Times-Bold", fontBold);
+
     let buffers = [];
     doc.on("data", buffers.push.bind(buffers));
     const pdfEndPromise = new Promise((resolve) =>
       doc.on("end", () => resolve(Buffer.concat(buffers)))
     );
 
+    // Tùy chọn bảng chung
+    const defaultTableOpts = {
+      hideHeader: true,
+      columnWidths: [150, 350],
+      prepareRow: (row, i) => doc.font("Times-Regular").fontSize(12),
+    };
+
     // ===== HEADER =====
-    doc.font(fontBold).fontSize(22).fillColor("#2C3E50")
+    doc.font("Times-Bold").fontSize(22).fillColor("#2C3E50")
       .text("SALE CONTRACT", { align: "center", underline: true });
     doc.moveDown(0.5);
-    doc.font(fontRegular).fontSize(12).fillColor("#555")
+    doc.font("Times-Regular").fontSize(12).fillColor("#555")
       .text(`Contract Date: ${new Date(signDate).toLocaleDateString()}`, { align: "center" });
     doc.moveDown(1);
 
     // ===== SELLER INFO =====
-    doc.moveDown(0.5);
-    doc.font(fontBold).fontSize(14).fillColor("#000").text("Seller Information");
+    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Seller Information");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    doc.font(fontRegular).fontSize(12).fillColor("#333")
-      .text(`Name: ${order.admin?.name || ""}`, { align: "left" })
-      .moveDown(1);
+    await doc.table({
+      headers: [],
+      rows: [
+        ["Name", order.admin?.name || ""],
+        ["Phone", order.admin?.phone || ""],
+        ["Email", order.admin?.email || ""],
+      ],
+      ...defaultTableOpts
+    });
+    doc.moveDown(1);
 
     // ===== BUYER INFO =====
-    doc.font(fontBold).fontSize(14).fillColor("#000").text("Buyer Information");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     const buyer = order.customerInfo;
+    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Buyer Information");
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    doc.font(fontRegular).fontSize(12).fillColor("#333")
-      .text(`Name: ${buyer.fullName || ""}`);
-    if (buyer.email) doc.text(`Email: ${buyer.email}`);
-    if (buyer.phone) doc.text(`Phone: ${buyer.phone}`);
-    if (buyer.address) doc.text(`Address: ${buyer.address}`);
-    if (buyer.citizenId) doc.text(`Citizen ID: ${buyer.citizenId}`);
+    await doc.table({
+      headers: [],
+      rows: [
+        ["Name", buyer.fullName || ""],
+        ["Email", buyer.email || ""],
+        ["Phone", buyer.phone || ""],
+        ["Address", buyer.address || ""],
+        ["Citizen ID", buyer.citizenId || ""],
+      ],
+      ...defaultTableOpts
+    });
     doc.moveDown(1);
 
     // ===== CAR INFO =====
-    doc.font(fontBold).fontSize(14).fillColor("#000").text("Car Information");
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     const car = order.carInfo;
+    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Car Information");
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    doc.font(fontRegular).fontSize(12).fillColor("#333")
-      .text(`Title: ${car.title || ""}`);
-    if (car.brandId?.name) doc.text(`Brand: ${car.brandId.name}`);
-    if (car.model) doc.text(`Model: ${car.model}`);
-    if (car.carType) doc.text(`Type: ${car.carType}`);
-    if (car.exteriorColor) doc.text(`Color: ${car.exteriorColor.join(", ")}`);
+    await doc.table({
+      headers: [],
+      rows: [
+        ["Title", car.title || ""],
+        ["Brand", car.brandId?.name || ""],
+        ["Model", car.model || ""],
+        ["Type", car.carType || ""],
+        ["Color", Array.isArray(car.exteriorColor) ? car.exteriorColor.join(", ") : ""],
+      ],
+      ...defaultTableOpts
+    });
     doc.moveDown(1);
 
     // ===== SALE DETAILS =====
-    doc.font(fontBold).fontSize(14).fillColor("#000").text("Sale Details");
+    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Sale Details");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
     doc.moveDown(0.5);
-    doc.font(fontRegular).fontSize(12).fillColor("#333")
-      .text(`Total Price: $${order.totalPrice.toFixed(2)}`);
+    await doc.table({
+      headers: [],
+      rows: [
+        ["Total Price", `$${order.totalPrice.toFixed(2)}`],
+      ],
+      ...defaultTableOpts
+    });
     doc.moveDown(1);
 
     // ===== SIGNATURE =====
-    doc.font(fontBold).fontSize(14).fillColor("#000").text("Signature");
+    doc.font("Times-Bold").fontSize(14).fillColor("#000").text("Signature");
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("#ccc").stroke();
-    doc.moveDown(1.5);
-    doc.font(fontRegular).fontSize(12).fillColor("#333")
-      .text(`Signed by: ${signerName}`)
-      .text(`Date: ${new Date(signDate).toLocaleDateString()}`);
+    doc.moveDown(2);
 
-    // End PDF
+    // Seller signature box
+    doc.font("Times-Regular").fontSize(12).text("Seller Signature", 100, doc.y, { align: "left" });
+    doc.moveDown(3);
+    doc.moveTo(80, doc.y).lineTo(220, doc.y).strokeColor("#000").stroke();
+
+    // Buyer signature box
+    const buyerX = 350;
+    doc.font("Times-Regular").fontSize(12).text("Buyer Signature", buyerX, doc.y - 60, { align: "left" });
+    doc.moveDown(3);
+    doc.moveTo(buyerX, doc.y).lineTo(buyerX + 140, doc.y).strokeColor("#000").stroke();
+
     doc.end();
+
     const pdfBuffer = await pdfEndPromise;
 
     // Upload
