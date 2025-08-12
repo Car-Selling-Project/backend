@@ -16,7 +16,7 @@ export const createOrder = async (req, res) => {
       .populate("admin", "name")
       .populate("carInfo", "-locationId")
       .populate("location", "name")
-      .populate("customerId", "name");  
+      .populate("customerId");
 
     return res.status(201).json({
       message: "✅ Order created successfully",
@@ -58,7 +58,7 @@ export const getAllOrders = async (req, res) => {
       .populate("admin", "name")
       .populate("carInfo", "-locationId")
       .populate("location", "name")
-      .populate("customerId", "name");  
+      .populate("customerId");  
 
     return res.status(200).json({
       message: "✅ Get all orders successfully",
@@ -81,7 +81,7 @@ export const getOrderById = async (req, res) => {
       .populate("admin", "name")
       .populate("carInfo", "-locationId")
       .populate("location", "name")
-      .populate("customerId", "name"); 
+      .populate("customerId"); 
 
     if (!order) {
       return res.status(404).json({
@@ -116,7 +116,7 @@ export const updateOrderById = async (req, res) => {
       .populate("admin", "name")
       .populate("carInfo", "-locationId")
       .populate("location", "name")
-      .populate("customerId", "name"); 
+      .populate("customerId"); 
 
     if (!updatedOrder) {
       return res.status(404).json({
@@ -208,3 +208,92 @@ export const canceledOrder = async(req, res) => {
      return res.status(500).json({ message: "Server error", error });
   }
 }
+// 1. Lấy tất cả order có status = "confirm" của customer
+export const getAllOrderStatusConfirm = async (req, res) => {
+  try {
+    const customerId = req.customer?._id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const orders = await Order.find({ customerId, status: "confirm" })
+      .populate("admin", "name")
+      .populate("carInfo", "-locationId")
+      .populate("location", "name")
+      .populate("customerId");
+
+    return res.status(200).json({
+      message: "✅ Confirmed orders retrieved successfully",
+      data: orders,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "❌ Failed to get confirmed orders",
+      error: error.message,
+    });
+  }
+};
+
+// 2. Lấy tất cả order theo trạng thái truyền qua query param hoặc tất cả nếu không truyền
+export const getAllOrderStatus = async (req, res) => {
+  try {
+    const customerId = req.customer?._id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Lấy trạng thái từ query param, ví dụ ?status=pending
+    const { status } = req.query;
+    let filter = { customerId };
+    if (status) {
+      filter.status = status;
+    }
+
+    const orders = await Order.find(filter)
+      .populate("admin", "name")
+      .populate("carInfo", "-locationId")
+      .populate("location", "name")
+      .populate("customerId");
+
+    return res.status(200).json({
+      message: `✅ Orders retrieved successfully${status ? ` with status ${status}` : ""}`,
+      data: orders,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "❌ Failed to get orders",
+      error: error.message,
+    });
+  }
+};
+
+// 3. Lấy order theo id (chỉ khi thuộc về customer)
+export const getOrderByIdForCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const customerId = req.customer?._id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const order = await Order.findOne({ _id: id, customerId })
+      .populate("admin", "name")
+      .populate("carInfo", "-locationId")
+      .populate("location", "name")
+      .populate("customerId");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found or access denied" });
+    }
+
+    return res.status(200).json({
+      message: "✅ Order retrieved successfully",
+      data: order,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "❌ Failed to get order",
+      error: error.message,
+    });
+  }
+};

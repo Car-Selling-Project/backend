@@ -24,6 +24,7 @@ import OrderRouter from "./routes/Orders.routes.js";
 import ContractRouter from "./routes/Contracts.routes.js";
 import LocationRouter from "./routes/Locations.route.js";
 import BrandRouter from "./routes/Brands.routes.js";
+import TestDriveRouter from "./routes/TestDrive.routes.js";
 // ✅ Load biến môi trường từ .env
 dotenv.config();
 
@@ -83,6 +84,9 @@ app.use("/customers", CarRouter);
 app.use("/customers" , CompareCarRouter);
 app.use("/customers", LocationRouter);
 app.use("/customers" , BrandRouter);
+app.use("/customers", ContractRouter);
+app.use("/customers", TestDriveRouter);
+app.use("/customers", OrderRouter);
 
 // Admins
 app.use("/admins", RegisterAdminsRouter);
@@ -94,6 +98,7 @@ app.use("/admins", OrderRouter);
 app.use("/admins" , ContractRouter);
 app.use("/admins", LocationRouter);
 app.use("/admins", BrandRouter);
+app.use("/admins", TestDriveRouter);
 // ✅ Export app để dùng trong test
 export default app;
 

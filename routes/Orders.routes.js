@@ -10,8 +10,12 @@ import {
     updateOrderById,
     deleteOrderById,
     confirmOrder,
-    canceledOrder
+    canceledOrder,
+    getAllOrderStatusConfirm,
+    getAllOrderStatus,
+    getOrderByIdForCustomer
 } from "../controllers/Orders.controller.js";
+import {authCustomer} from "../middlewares/AuthCustomers.middlewares.js";
 const OrderRouter = express.Router();
 OrderRouter.post("/orders" , authAdmin , validateRequest(orderValidationSchema) , createOrder);
 OrderRouter.get("/orders" , authAdmin , getAllOrders);
@@ -20,4 +24,7 @@ OrderRouter.patch("/orders/:id", authAdmin , validateRequest(updateOrderValidati
 OrderRouter.delete("/delete/:id", authAdmin, deleteOrderById);
 OrderRouter.patch("/orders/:id/confirm" , authAdmin , confirmOrder);
 OrderRouter.patch("/orders/:id/canceled", authAdmin , canceledOrder);
+OrderRouter.get("/orders/confirm", authCustomer, getAllOrderStatusConfirm);
+OrderRouter.get("/orders", authCustomer, getAllOrderStatus); // ?status=...
+OrderRouter.get("/orders/:id", authCustomer, getOrderByIdForCustomer);
 export default OrderRouter;

@@ -1,0 +1,14 @@
+import express from "express";
+import { authAdmin } from "../middlewares/AuthAdmins.middlewares.js";
+import { authCustomer } from "../middlewares/AuthCustomers.middlewares.js";
+import { approveTestDrive, createTestDrive, deleteTestDrive, getAllApprovedTestDrives, getApprovedTestDrivesByCustomer, getTestDriveById  , getAllTestDrivesByCustomer , getTestDriveByIdForCustomer }from "../controllers/TestDrive.controller.js";
+const TestDriveRouter = express.Router();
+TestDriveRouter.post("/testdrives", authAdmin, createTestDrive);
+TestDriveRouter.get("/testdrives/:id", authAdmin, getTestDriveById);
+TestDriveRouter.get("/testdrives/approved", authAdmin, getAllApprovedTestDrives);
+TestDriveRouter.patch("/testdrives/:id" , authAdmin , approveTestDrive);
+TestDriveRouter.delete("/testdrives/:id", authAdmin, deleteTestDrive);
+TestDriveRouter.get("/testdrives/approved", authCustomer, getApprovedTestDrivesByCustomer);
+TestDriveRouter.get("/testdrives", authCustomer, getAllTestDrivesByCustomer);
+TestDriveRouter.get("/testdrives/:id", authCustomer, getTestDriveByIdForCustomer);
+export default TestDriveRouter;
