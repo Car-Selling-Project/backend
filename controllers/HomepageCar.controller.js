@@ -1,16 +1,28 @@
-import Car from "../models/cars.schema.js";
+// controllers/carController.js
+import Review from "../models/review.schema.js";
 
-// Sửa controller để nhận (req, res)
 export const getPopularCars = async (req, res) => {
   try {
-    const cars = await Car.find({ 
-      status: "active", 
-      rating: 5 
-    })
-    .sort({ viewCount: -1 }) 
-    .limit(4)
-    .populate("brandId", "name")
-    .populate("locationId", "name");
+    // Lấy carId có rating 5, group đếm số lượt review 5 sao, sort giảm dần, limit 4
+    const reviews = await Review.aggregate([
+      { $match: { rating: 5 } },
+      { $group: { _id: "$carId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 4 }
+    ]);
+
+    const carIds = reviews.map(r => r._id);
+
+    const cars = await Review.find({ carId: { $in: carIds } })
+      .populate({
+        path: 'carId',
+        select: 'title brandId locationId',
+        populate: [
+          { path: 'brandId', select: 'name' },
+          { path: 'locationId', select: 'name' }
+        ]
+      })
+      .exec();
 
     res.status(200).json({ cars });
   } catch (err) {
@@ -20,17 +32,25 @@ export const getPopularCars = async (req, res) => {
 
 export const getRecommendedCars = async (req, res) => {
   try {
-    const cars = await Car.aggregate([
-      {
-        $match: {
-          status: "active",
-          rating: { $gte: 4, $lte: 5 },
-        },
-      },
-      {
-        $sample: { size: 8 },
-      },
+    // Lấy carId có rating từ 4 đến 5, random 8 cái
+    const reviews = await Review.aggregate([
+      { $match: { rating: { $gte: 4, $lte: 5 } } },
+      { $group: { _id: "$carId" } },
+      { $sample: { size: 8 } }
     ]);
+
+    const carIds = reviews.map(r => r._id);
+
+    const cars = await Review.find({ carId: { $in: carIds } })
+      .populate({
+        path: 'carId',
+        select: 'title brandId locationId',
+        populate: [
+          { path: 'brandId', select: 'name' },
+          { path: 'locationId', select: 'name' }
+        ]
+      })
+      .exec();
 
     res.status(200).json({ cars });
   } catch (err) {

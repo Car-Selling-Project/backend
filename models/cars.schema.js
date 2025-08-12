@@ -113,20 +113,6 @@ const CarSchema = new mongoose.Schema({
             message: "🚫 Stock must be an integer"
         }
     },
-    viewCount:{
-        type:Number,
-        default:0,
-        min:0,
-       set: val => Math.round(val * 10) / 10
-    },
-     rating:{
-        type:Number,
-        required:true,
-        min:1,
-        max:5,
-        set:val => Math.round(val * 10) / 10,
-        default:5
-    },
     status:{
         type:String,
         enum:["active", "inactive"],

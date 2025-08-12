@@ -2,10 +2,10 @@ import Customer from "../models/customers.schema.js";
 
 export const registerCustomer = async (req, res) => {
   try {
-    const { name, email, phone, password, confirmPassword, dob, gender } = req.body;
+    const { name, email, phone, password, confirmPassword, dob, gender , citizenId, address } = req.body;
 
     // ✅ 1. Check missing fields
-    if (!name || !email || !phone || !password || !confirmPassword || !dob || !gender) {
+    if (!name || !email || !phone || !password || !confirmPassword || !dob || !gender || !citizenId || !address) {
       return res.status(400).json({
         errors: [
           {
@@ -66,8 +66,19 @@ export const registerCustomer = async (req, res) => {
         ],
       });
     }
-
-    // ✅ 6. Create customer (hash handled in mongoose pre-save)
+    // ✅ 6. Check duplicate citizenId
+    const existingCitizenId = await Customer.findOne({ citizenId });
+    if (existingCitizenId) {
+      return res.status(400).json({
+        errors: [
+          {
+            key: "citizenId",
+            message: "Citizen ID is already in use",
+          },
+        ],
+      });
+    }
+    // ✅ 7. Create customer (hash handled in mongoose pre-save)
     const newCustomer = new Customer({
       name,
       email,
@@ -75,6 +86,8 @@ export const registerCustomer = async (req, res) => {
       password,
       dob,
       gender: gender.toLowerCase().trim(),
+      citizenId,
+      address
     });
 
     await newCustomer.save();

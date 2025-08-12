@@ -87,18 +87,6 @@ export const updateCarSchema = Joi.object({
     "number.min": "🚫 Stock cannot be negative",
     "number.integer": "🚫 Stock must be an integer"
   }),
-
-  viewCount: Joi.number().min(0).precision(1).optional().messages({
-    "number.base": "🚫 View count must be a number",
-    "number.min": "🚫 View count cannot be negative"
-  }),
-
-  rating: Joi.number().min(1).max(5).optional().messages({
-    "number.base": "🚫 Rating must be a number",
-    "number.min": "🚫 Rating must be at least 1 star",
-    "number.max": "🚫 Rating cannot be more than 5 stars"
-  }),
-
   status: Joi.string().valid("active", "inactive").optional().messages({
     "any.only": "🚫 Status must be either active or inactive"
   }),

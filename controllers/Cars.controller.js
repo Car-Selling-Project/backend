@@ -1,4 +1,3 @@
-// controllers/cars.controller.js
 
 import Car from "../models/cars.schema.js";
 import Brand from "../models/brands.schema.js";
@@ -27,8 +26,6 @@ export const createCar = async (req, res) => {
       dimension,
       engine,
       stock,
-      rating,
-      viewCount,
       status
     } = req.body;
 
@@ -307,3 +304,37 @@ export const deleteCarByid = async(req , res) => {
     })
   }
 }
+// Get /cars with Status active
+export const getActiveCars = async (req, res) => {
+  try {
+    const activeCars = await Car.find({ status: "active" })
+      .populate("brandId", "name")
+      .populate("locationId", "name");
+
+    res.status(200).json({
+      message: "✅ Get active cars successfully",
+      cars: activeCars,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "🚫 Failed to get active cars",
+      error: error.message,
+    });
+  }
+};
+// function with automation inactive with car.stock < 1
+export const automateInactiveCars = async () => {
+  try {
+    const inactiveCars = await Car.find({ status: "active", stock: { $lt: 1 } });
+
+    if (inactiveCars.length > 0) {
+      await Car.updateMany(
+        { _id: { $in: inactiveCars.map(car => car._id) } },
+        { status: "inactive" }
+      );
+      console.log(`✅ Updated ${inactiveCars.length} cars to inactive status.`);
+    }
+  } catch (error) {
+    console.error("❌ Error automating inactive cars:", error);
+  }
+};

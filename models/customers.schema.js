@@ -33,6 +33,17 @@ const customerSchema = new mongoose.Schema({
     enum: ["male", "female", "other"],
     required: true,
   },
+  address:{
+    type: String,
+    required:true,
+    trim:true
+  },
+  citizenId: {
+    type:String,
+    required:true,
+    unique:true,
+    trim:true
+  }
 }, {
   timestamps: true
 });
