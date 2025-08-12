@@ -1,51 +1,74 @@
 import TestDrive from "../models/testdrives.schema.js";
-export const createTestDrive = async(req , res) => {
-    try{
-        const adminId = req.admin?._id;
-        const payload = {
-            ...req.body,
-            admin:adminId
-        };
-        const newTestDrive = await TestDrive.create(payload);
-        const populateTestDrive = await TestDrive.findById(newTestDrive._id)
-        .populate("admin" , "name")
-        .populate(
-            {
-                path:"carInfo",
-                select:"title brandId model exteriorColor carType",
-                populate:{
-                    path:"brandId",
-                    select:"name"
-                },
-            },
-        )
-        .populate("location" , "name")
-        .populate("customerInfo" , "fullName phone email citizenId address");
-        return res.status(201).json({
-            message: "✅ Test Drive created successfully",
-            data: populateTestDrive,
-            customer: populateTestDrive.customerId
-            ?{ id: populateTestDrive.customerId._id}
-            : null
-        });
-    }catch (error){
-        return res.status(500).json({
-            message: "❌ Failed to create TestDrive",
-            error: error.message,
-        })
+import Car from "../models/cars.schema.js";
+export const createTestDrive = async (req, res) => {
+  try {
+    const adminId = req.admin?._id;
+    const { carInfo } = req.body;
+
+    if (!carInfo) {
+      return res.status(400).json({ message: "Car info is required" });
     }
-}
+
+    // Lấy xe
+    const car = await Car.findById(carInfo);
+    if (!car) {
+      return res.status(404).json({ message: "Car not found" });
+    }
+
+    // Kiểm tra trạng thái active
+    if (car.status !== "active") {
+      return res.status(400).json({ message: "Car is not active for test drive" });
+    }
+
+    // Kiểm tra stock
+    if (!car.stock || car.stock < 1) {
+      return res.status(400).json({ message: "Car is out of stock" });
+    }
+
+    // Tạo test drive với adminId gắn thêm vào payload
+    const payload = {
+      ...req.body,
+      admin: adminId,
+    };
+
+    const newTestDrive = await TestDrive.create(payload);
+
+    // Populate dữ liệu trả về
+    const populateTestDrive = await TestDrive.findById(newTestDrive._id)
+      .populate("admin", "name")
+      .populate({
+        path: "carInfo",
+        select: "title brandId model exteriorColor carType",
+        populate: {
+          path: "brandId",
+          select: "name",
+        },
+      })
+      .populate("location", "name");
+
+    return res.status(201).json({
+      message: "✅ Test Drive created successfully",
+      data: populateTestDrive,
+      customer: populateTestDrive.customerId
+        ? { id: populateTestDrive.customerId._id }
+        : null,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "❌ Failed to create TestDrive",
+      error: error.message,
+    });
+  }
+};
 export const approveTestDrive = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Lấy testDrive và populate carInfo.status để check xe active
     const testDrive = await TestDrive.findById(id).populate("carInfo", "status");
     if (!testDrive) {
       return res.status(404).json({ message: "Test Drive not found" });
     }
 
-    // Chỉ cho phép thay đổi khi status đang là pending
     if (testDrive.status !== "pending") {
       return res.status(400).json({
         message: `Cannot change status because test drive is already "${testDrive.status}"`,
@@ -58,22 +81,20 @@ export const approveTestDrive = async (req, res) => {
       });
     }
 
+    // Tính thời gian kết thúc chạy thử: requestDay + 30 phút
+    const start = testDrive.requestDay;
+    const end = new Date(start);
+    end.setMinutes(end.getMinutes() + 30);
+
     // Kiểm tra lịch trùng với các test drive khác đã approved
     const overlappingTestDrive = await TestDrive.findOne({
       _id: { $ne: testDrive._id },
       carInfo: testDrive.carInfo._id,
       status: "approved",
       $or: [
-        {
-          requestDay: { $lt: testDrive.endDay, $gte: testDrive.requestDay },
-        },
-        {
-          endDay: { $gt: testDrive.requestDay, $lte: testDrive.endDay },
-        },
-        {
-          requestDay: { $lte: testDrive.requestDay },
-          endDay: { $gte: testDrive.endDay },
-        },
+        { requestDay: { $lt: end, $gte: start } },
+        { $expr: { $and: [ { $gt: ["$requestDay", start] }, { $lt: ["$requestDay", end] } ] } },
+        { $expr: { $and: [ { $lte: ["$requestDay", start] }, { $gte: ["$requestDay", end] } ] } },
       ],
     });
 
@@ -91,10 +112,7 @@ export const approveTestDrive = async (req, res) => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    if (
-      testDrive.requestDay >= todayStart &&
-      testDrive.endDay > testDrive.requestDay
-    ) {
+    if (start >= todayStart) {
       testDrive.status = "approved";
       await testDrive.save();
       return res.status(200).json({
@@ -105,7 +123,7 @@ export const approveTestDrive = async (req, res) => {
       testDrive.status = "declined";
       await testDrive.save();
       return res.status(400).json({
-        message: "❌ Test Drive declined due to invalid requestDay or endDay",
+        message: "❌ Test Drive declined due to invalid requestDay",
         data: testDrive,
       });
     }

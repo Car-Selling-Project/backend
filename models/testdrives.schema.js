@@ -19,10 +19,6 @@ const testdriveSchema = new mongoose.Schema({
         type:Date,
         required:true
     },
-    endDay:{
-        type:Date,
-        required:true
-    },
     note:{
         type:String
     },

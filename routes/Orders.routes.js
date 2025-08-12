@@ -25,6 +25,6 @@ OrderRouter.delete("/delete/:id", authAdmin, deleteOrderById);
 OrderRouter.patch("/orders/:id/confirm" , authAdmin , confirmOrder);
 OrderRouter.patch("/orders/:id/canceled", authAdmin , canceledOrder);
 OrderRouter.get("/orders/confirm", authCustomer, getAllOrderStatusConfirm);
-OrderRouter.get("/orders", authCustomer, getAllOrderStatus); // ?status=...
+OrderRouter.get("/orders", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orders/:id", authCustomer, getOrderByIdForCustomer);
 export default OrderRouter;
