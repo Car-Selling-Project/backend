@@ -1,9 +1,9 @@
 // controllers/carController.js
+import Car from "../models/cars.schema.js";
 import Review from "../models/review.schema.js";
 
 export const getPopularCars = async (req, res) => {
   try {
-    // Lấy carId có rating 5, group đếm số lượt review 5 sao, sort giảm dần, limit 4
     const reviews = await Review.aggregate([
       { $match: { rating: 5 } },
       { $group: { _id: "$carId", count: { $sum: 1 } } },
@@ -13,22 +13,22 @@ export const getPopularCars = async (req, res) => {
 
     const carIds = reviews.map(r => r._id);
 
-    const cars = await Review.find({ carId: { $in: carIds } })
-      .populate({
-        path: 'carId',
-        select: 'title brandId locationId',
-        populate: [
-          { path: 'brandId', select: 'name' },
-          { path: 'locationId', select: 'name' }
-        ]
+    const cars = await Car.find({ 
+        _id: { $in: carIds },
+        status: 'active'
       })
-      .exec();
+      .select('title brandId locationId')
+      .populate([
+        { path: 'brandId', select: 'name' },
+        { path: 'locationId', select: 'name' }
+      ]);
 
     res.status(200).json({ cars });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch popular cars", error: err.message });
   }
 };
+
 
 export const getRecommendedCars = async (req, res) => {
   try {
@@ -41,19 +41,21 @@ export const getRecommendedCars = async (req, res) => {
 
     const carIds = reviews.map(r => r._id);
 
-    const cars = await Review.find({ carId: { $in: carIds } })
-      .populate({
-        path: 'carId',
-        select: 'title brandId locationId',
-        populate: [
-          { path: 'brandId', select: 'name' },
-          { path: 'locationId', select: 'name' }
-        ]
-      })
-      .exec();
+    const cars = await Car.find({
+      _id: { $in: carIds },
+      status: 'active'
+    })
+      .select('title brandId locationId')
+      .populate([
+        { path: 'brandId', select: 'name' },
+        { path: 'locationId', select: 'name' }
+      ]);
 
     res.status(200).json({ cars });
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch recommended cars", error: err.message });
+    res.status(500).json({
+      message: "Failed to fetch recommended cars",
+      error: err.message
+    });
   }
 };

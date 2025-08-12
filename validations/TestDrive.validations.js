@@ -138,13 +138,12 @@ const testDriveSchema = Joi.object({
       })
   }).required(),
 
-  status: Joi.string()
-    .valid('pending', 'approved', 'declined')
-    .required()
-    .messages({
-      'string.empty': 'Status is required',
-      'any.only': 'Status must be one of: pending, approved, declined'
-    }),
+status: Joi.string()
+  .valid('pending', 'approved', 'declined')
+  .default('pending')
+  .messages({
+    'any.only': 'Status must be one of: pending, approved, declined'
+  })
 });
 
 export default testDriveSchema;
