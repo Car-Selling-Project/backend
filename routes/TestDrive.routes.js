@@ -5,7 +5,7 @@ import { approveTestDrive, createTestDrive, deleteTestDrive, getAllApprovedTestD
 import { validateRequest } from "../middlewares/validateRequest.middlewares.js";
 import testDriveSchema from "../validations/TestDrive.validations.js";
 const TestDriveRouter = express.Router();
-TestDriveRouter.post("/testdrives", authAdmin, validateRequest(testDriveSchema), createTestDrive);
+TestDriveRouter.post("/testdrives", validateRequest(testDriveSchema), createTestDrive);
 TestDriveRouter.get("/testdrives/:id", authAdmin, getTestDriveById);
 TestDriveRouter.get("/testdrives/approved", authAdmin, getAllApprovedTestDrives);
 TestDriveRouter.patch("/testdrives/:id" , authAdmin , approveTestDrive);

@@ -2,7 +2,6 @@ import TestDrive from "../models/testdrives.schema.js";
 import Car from "../models/cars.schema.js";
 export const createTestDrive = async (req, res) => {
   try {
-    const adminId = req.admin?._id;
     const { carInfo } = req.body;
 
     if (!carInfo) {
@@ -35,7 +34,6 @@ export const createTestDrive = async (req, res) => {
 
     // Populate dữ liệu trả về
     const populateTestDrive = await TestDrive.findById(newTestDrive._id)
-      .populate("admin", "name")
       .populate({
         path: "carInfo",
         select: "title brandId model exteriorColor carType",

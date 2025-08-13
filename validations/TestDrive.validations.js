@@ -72,7 +72,7 @@ const testDriveSchema = Joi.object({
 
   customerId: Joi.string()
     .hex()
-    .required()
+    .optional()
     .custom(noWhitespace('Customer ID'))
     .messages({
       'string.empty': 'Customer ID is required',

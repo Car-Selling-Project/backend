@@ -1,10 +1,5 @@
 import mongoose from "mongoose";
 const testdriveSchema = new mongoose.Schema({
-    admin:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref: "Admin",
-        required:true
-    },
     carInfo:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Car",
@@ -25,7 +20,6 @@ const testdriveSchema = new mongoose.Schema({
     customerId:{
         type:mongoose.Schema.Types.ObjectId,
         ref: "Customer",
-        required:true
     },
     customerInfo:{
         fullName:{type: String, required: true},
