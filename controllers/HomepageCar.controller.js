@@ -17,7 +17,6 @@ export const getPopularCars = async (req, res) => {
         _id: { $in: carIds },
         status: 'active'
       })
-      .select('title brandId locationId')
       .populate([
         { path: 'brandId', select: 'name' },
         { path: 'locationId', select: 'name' }
@@ -45,7 +44,6 @@ export const getRecommendedCars = async (req, res) => {
       _id: { $in: carIds },
       status: 'active'
     })
-      .select('title brandId locationId')
       .populate([
         { path: 'brandId', select: 'name' },
         { path: 'locationId', select: 'name' }
