@@ -27,7 +27,6 @@ export const createTestDrive = async (req, res) => {
     // Tạo test drive với adminId gắn thêm vào payload
     const payload = {
       ...req.body,
-      admin: adminId,
     };
 
     const newTestDrive = await TestDrive.create(payload);
