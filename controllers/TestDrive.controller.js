@@ -317,3 +317,29 @@ export const getTestDriveByIdForCustomer = async (req, res) => {
     });
   }
 };
+// get all test drives for admin
+export const getAllTestDrives = async (req, res) => {
+  try {
+    const testDrives = await TestDrive.find()
+      .populate("admin", "name")
+      .populate({
+        path: "carInfo",
+        select: "title brandId model status exteriorColor carType",
+        populate: [
+          { path: "brandId", select: "name" },
+        ],
+      })
+      .populate("location", "name")
+      .populate("customerInfo", "fullName phone email citizenId address");
+
+    return res.status(200).json({
+      message: "✅ All test drives retrieved successfully",
+      data: testDrives,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "❌ Failed to get all test drives",
+      error: error.message,
+    });
+  }
+};

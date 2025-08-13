@@ -1,7 +1,7 @@
 import express from "express";
 import { authAdmin } from "../middlewares/AuthAdmins.middlewares.js";
 import { authCustomer } from "../middlewares/AuthCustomers.middlewares.js";
-import { approveTestDrive, createTestDrive, deleteTestDrive, getAllApprovedTestDrives, getApprovedTestDrivesByCustomer, getTestDriveById  , getAllTestDrivesByCustomer , getTestDriveByIdForCustomer }from "../controllers/TestDrive.controller.js";
+import { approveTestDrive, createTestDrive, deleteTestDrive, getAllApprovedTestDrives, getApprovedTestDrivesByCustomer, getTestDriveById  , getAllTestDrivesByCustomer , getTestDriveByIdForCustomer , getAllTestDrives }from "../controllers/TestDrive.controller.js";
 import { validateRequest } from "../middlewares/validateRequest.middlewares.js";
 import testDriveSchema from "../validations/TestDrive.validations.js";
 const TestDriveRouter = express.Router();
@@ -13,4 +13,5 @@ TestDriveRouter.delete("/testdrives/:id", authAdmin, deleteTestDrive);
 TestDriveRouter.get("/testdrives/approved", authCustomer, getApprovedTestDrivesByCustomer);
 TestDriveRouter.get("/testdrives", authCustomer, getAllTestDrivesByCustomer);
 TestDriveRouter.get("/testdrives/:id", authCustomer, getTestDriveByIdForCustomer);
+TestDriveRouter.get("/testdrives", authAdmin, getAllTestDrives);
 export default TestDriveRouter;
