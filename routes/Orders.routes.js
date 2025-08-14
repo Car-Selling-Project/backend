@@ -8,12 +8,13 @@ import {
     getAllOrders,
     getOrderById,
     updateOrderById,
-    deleteOrderById,
     confirmOrder,
     canceledOrder,
     getAllOrderStatusConfirm,
     getAllOrderStatus,
-    getOrderByIdForCustomer
+    getOrderByIdForCustomer,
+    updatePaymentMethodForCustomer,
+    updateDepositForCustomer
 } from "../controllers/Orders.controller.js";
 import {authCustomer} from "../middlewares/AuthCustomers.middlewares.js";
 const OrderRouter = express.Router();
@@ -21,10 +22,11 @@ OrderRouter.post("/orders" , authAdmin , validateRequest(orderValidationSchema) 
 OrderRouter.get("/orders" , authAdmin , getAllOrders);
 OrderRouter.get("/orders/:id" , authAdmin , getOrderById);
 OrderRouter.patch("/orders/:id", authAdmin , validateRequest(updateOrderValidationSchema), updateOrderById);
-OrderRouter.delete("/delete/:id", authAdmin, deleteOrderById);
 OrderRouter.patch("/orders/:id/confirm" , authAdmin , confirmOrder);
 OrderRouter.patch("/orders/:id/canceled", authAdmin , canceledOrder);
 OrderRouter.get("/orders/confirm", authCustomer, getAllOrderStatusConfirm);
 OrderRouter.get("/orders", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orders/:id", authCustomer, getOrderByIdForCustomer);
+OrderRouter.patch("/orders/:id/paymentmethod" , authCustomer , updatePaymentMethodForCustomer);
+OrderRouter.patch("/orders/:id/deposit" , authCustomer , updateDepositForCustomer);
 export default OrderRouter;

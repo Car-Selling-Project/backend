@@ -1,39 +1,85 @@
 import Order from "../models/orders.schema.js";
 import Car from "../models/cars.schema.js";
+
+// Helper populate
+const populateOrder = (query) =>
+  query
+    .populate("admin", "name email")
+    .populate("carInfo", "title price stock")
+    .populate("location", "name")
+    .populate("customerId", "name email phone");
+
+// Helper response
+const orderResponse = (order) => ({
+  id: order._id,
+  data: order,
+  customer: order.customerId
+    ? { id: order.customerId._id, name: order.customerId.name }
+    : null,
+});
+
+// Create Order
 export const createOrder = async (req, res) => {
   try {
     const adminId = req.admin?._id;
 
-    // ✅ Không sửa req.body trực tiếp
+    const { carInfo: carId, quantity, paymentMethod, bankDetails, qrCodeUrl, deposit: reqDeposit, ...rest } = req.body;
+
+    const car = await Car.findById(carId);
+    if (!car) return res.status(404).json({ message: "❌ Car not found" });
+
+    const registrationFee = 500;
+    const insuranceFee = 300;
+    const tax = 0.1; // 10%
+
+    const fullPrice = Math.round(car.price * quantity + car.price * tax + registrationFee + insuranceFee);
+
+    let depositAmount = 0;
+    if (paymentMethod === "deposit") {
+      if (!reqDeposit) return res.status(400).json({ message: "❌ Deposit amount is required" });
+      if (reqDeposit < 0.3 * fullPrice || reqDeposit > fullPrice)
+        return res.status(400).json({ message: `❌ Deposit must be between 30% and 100% of totalPrice (${Math.round(0.3 * fullPrice)} - ${fullPrice})` });
+      depositAmount = reqDeposit;
+    } else {
+      depositAmount = fullPrice; // full cash
+    }
+
     const payload = {
-      ...req.body,
+      ...rest,
       admin: adminId,
+      carInfo: carId,
+      quantity,
+      totalPrice: fullPrice,
+      deposit: depositAmount,
+      paymentMethod,
+      bankDetails: {},
+      qrCodeUrl: "",
     };
 
-    const newOrder = await Order.create(payload);
+    if (paymentMethod === "bank_transfer") {
+      if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber)
+        return res.status(400).json({ message: "❌ Bank name and account number required for bank transfer" });
+      payload.bankDetails = bankDetails;
+    }
 
-    const populatedOrder = await Order.findById(newOrder._id)
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId");
+    if (paymentMethod === "qr") {
+      if (!qrCodeUrl) return res.status(400).json({ message: "❌ qrCodeUrl is required for QR payment" });
+      payload.qrCodeUrl = qrCodeUrl;
+    }
+
+    const newOrder = await Order.create(payload);
+    const populatedOrder = await populateOrder(Order.findById(newOrder._id));
 
     return res.status(201).json({
       message: "✅ Order created successfully",
-      data: populatedOrder,
-      customer: populatedOrder.customerId
-        ? { id: populatedOrder.customerId._id, name: populatedOrder.customerId.name }
-        : null,
+      ...orderResponse(populatedOrder),
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to create order",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "❌ Failed to create order", error: error.message });
   }
 };
 
-// Get All Order and Order with filter
+// Get All Orders (admin)
 export const getAllOrders = async (req, res) => {
   try {
     const {
@@ -42,258 +88,279 @@ export const getAllOrders = async (req, res) => {
       location,
       status,
       paymentMethod,
-      customerId
+      customerId,
+      minPrice,
+      maxPrice,
+      startDate,
+      endDate,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      page = 1,
+      limit = 20
     } = req.query;
 
     const filter = {};
-
     if (admin) filter.admin = admin;
     if (carInfo) filter.carInfo = carInfo;
     if (location) filter.location = location;
     if (status) filter.status = status;
     if (paymentMethod) filter.paymentMethod = paymentMethod;
-    if(customerId) filter.customerId = customerId;
+    if (customerId) filter.customerId = customerId;
+    if (minPrice) filter.totalPrice = { ...filter.totalPrice, $gte: Number(minPrice) };
+    if (maxPrice) filter.totalPrice = { ...filter.totalPrice, $lte: Number(maxPrice) };
+    if (startDate) filter.createdAt = { ...filter.createdAt, $gte: new Date(startDate) };
+    if (endDate) filter.createdAt = { ...filter.createdAt, $lte: new Date(endDate) };
 
-    const orders = await Order.find(filter)
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId");  
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const orders = await populateOrder(
+      Order.find(filter)
+        .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
+        .skip(skip)
+        .limit(Number(limit))
+    );
 
     return res.status(200).json({
-      message: "✅ Get all orders successfully",
+      message: "✅ Get orders successfully",
       data: orders,
+      pagination: { page: Number(page), limit: Number(limit), count: orders.length }
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to get orders",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "❌ Failed to get orders", error: error.message });
   }
 };
 
-// Get Order follow Id
+// Get Order by ID
 export const getOrderById = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const order = await Order.findById(id)
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId"); 
-
-    if (!order) {
-      return res.status(404).json({
-        message: "❌ Order not found",
-      });
-    }
-
-    return res.status(200).json({
-      message: "✅ Get order successfully",
-      data: order,
-      customer: order.customerId
-        ? { id: order.customerId._id, name: order.customerId.name }
-        : null,
-    });
+    const { id } = req.params;
+    const order = await populateOrder(Order.findById(id));
+    if (!order) return res.status(404).json({ message: "❌ Order not found" });
+    return res.status(200).json({ message: "✅ Get order successfully", ...orderResponse(order) });
   } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to get order",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "❌ Failed to get order", error: error.message });
   }
 };
 
-// Update orders
+// Update Order
 export const updateOrderById = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const updatedOrder = await Order.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    })
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId"); 
-
-    if (!updatedOrder) {
-      return res.status(404).json({
-        success: false,
-        message: "❌ Order not found",
-      });
-    }
-
-    return res.status(200).json({
-      message: "✅ Order updated successfully",
-      data: updatedOrder,
-      customer: updatedOrder.customerId
-        ? { id: updatedOrder.customerId._id, name: updatedOrder.customerId.name }
-        : null,
-    });
+    const { id } = req.params;
+    const updatedOrder = await populateOrder(
+      Order.findByIdAndUpdate(id, req.body, { new: true, runValidators: true })
+    );
+    if (!updatedOrder) return res.status(404).json({ message: "❌ Order not found" });
+    return res.status(200).json({ message: "✅ Order updated successfully", ...orderResponse(updatedOrder) });
   } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to update order",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "❌ Failed to update order", error: error.message });
   }
 };
 
-// Delete order 
-export const deleteOrderById = async (req, res) => {
-  const { id } = req.params;
-
+// Confirm Order
+export const confirmOrder = async (req, res) => {
   try {
-    const deletedOrder = await Order.findByIdAndDelete(id);
+    const { orderId } = req.params;
 
-    if (!deletedOrder) {
+    const order = await Order.findById(orderId);
+    if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    return res.status(200).json({ message: "Order deleted successfully" });
+    const hasDeposit = order.deposit && order.deposit > 0;
+    const isPaidFull = order.totalPaid >= order.totalPrice;
+    const contractSigned = order.contract && order.contract.isSigned;
+
+    if (hasDeposit && isPaidFull && contractSigned) {
+      order.status = "confirmed";
+      await order.save();
+      return res.status(200).json({ message: "Order confirmed successfully", order });
+    } else {
+      return res.status(200).json({
+        message: "Order still pending, missing required conditions",
+        missing: {
+          deposit: !hasDeposit,
+          paidFull: !isPaidFull,
+          contractSigned: !contractSigned
+        },
+        order
+      });
+    }
+
   } catch (error) {
-    return res.status(500).json({ message: "Failed to delete order", error: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-export const confirmOrder = async (req, res) => {
+
+
+// Cancel Order
+export const canceledOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const order = await Order.findById(id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    if (order.status !== "pending") return res.status(400).json({ message: "Order is not in pending status" });
-    if (!order.contract?.url) return res.status(400).json({ message: "Contract file is missing" });
-    if (!order.contract?.signed) return res.status(400).json({ message: "Contract must be signed before confirmation" });
+    if (order.status !== "pending") return res.status(400).json({ message: "Only pending orders can be canceled" });
 
-    // Cập nhật trạng thái đơn
-    order.status = "confirmed";
+    order.status = "canceled";
     await order.save();
 
-    // Trừ stock xe
-    const carId = order.carInfo;
-    const car = await Car.findById(carId);
-    if (!car) {
-      return res.status(404).json({ message: "Car not found" });
-    }
-    
-    if (car.stock <= 0) {
-      return res.status(400).json({ message: "Car is out of stock" });
-    }
-
-    car.stock = car.stock - 1;
-    await car.save();
-
-    return res.json({
-      message: "✅ Order confirmed successfully and stock updated",
-      order,
-      car
-    });
+    res.status(200).json({ message: "🚫 Order canceled successfully", order });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
   }
 };
-export const canceledOrder = async(req, res) => {
-  try{
-    const {id} = req.params;
-    const order = await Order.findById(id);
-    if(!order)  return res.status(404).json({ message: "Order not found" });
-    if(order.status != "pending") return res.status(400).json({ message: "Only pending orders can be canceled" });
-    order.status = "canceled";
-    await  order.save();
-    res.status(201).json({
-       message: "🚫 Order canceled successfully",
-       order
-    });
-  }catch(error){
-     return res.status(500).json({ message: "Server error", error });
-  }
-}
-// 1. Lấy tất cả order có status = "confirm" của customer
-export const getAllOrderStatusConfirm = async (req, res) => {
+
+// Get Orders for Customer (with optional status)
+export const getOrdersForCustomer = async (req, res) => {
   try {
     const customerId = req.customer?._id;
-    if (!customerId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (!customerId) return res.status(401).json({ message: "Unauthorized" });
 
-    const orders = await Order.find({ customerId, status: "confirm" })
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId");
-
-    return res.status(200).json({
-      message: "✅ Confirmed orders retrieved successfully",
-      data: orders,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to get confirmed orders",
-      error: error.message,
-    });
-  }
-};
-
-// 2. Lấy tất cả order theo trạng thái truyền qua query param hoặc tất cả nếu không truyền
-export const getAllOrderStatus = async (req, res) => {
-  try {
-    const customerId = req.customer?._id;
-    if (!customerId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Lấy trạng thái từ query param, ví dụ ?status=pending
     const { status } = req.query;
-    let filter = { customerId };
-    if (status) {
-      filter.status = status;
-    }
+    const filter = { customerId, ...(status ? { status } : {}) };
 
-    const orders = await Order.find(filter)
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId");
+    const orders = await populateOrder(Order.find(filter));
 
-    return res.status(200).json({
-      message: `✅ Orders retrieved successfully${status ? ` with status ${status}` : ""}`,
-      data: orders,
-    });
+    res.status(200).json({ message: `✅ Orders retrieved successfully${status ? ` with status ${status}` : ""}`, data: orders });
   } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to get orders",
-      error: error.message,
-    });
+    return res.status(500).json({ message: "❌ Failed to get orders", error: error.message });
   }
 };
 
-// 3. Lấy order theo id (chỉ khi thuộc về customer)
+// Get single Order by ID for Customer
 export const getOrderByIdForCustomer = async (req, res) => {
   try {
     const { id } = req.params;
     const customerId = req.customer?._id;
-    if (!customerId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!customerId) return res.status(401).json({ message: "Unauthorized" });
+
+    const order = await populateOrder(Order.findOne({ _id: id, customerId }));
+    if (!order) return res.status(404).json({ message: "Order not found or access denied" });
+
+    return res.status(200).json({ message: "✅ Order retrieved successfully", data: order });
+  } catch (error) {
+    return res.status(500).json({ message: "❌ Failed to get order", error: error.message });
+  }
+};
+// Tính tổng tiền (full cash hoặc deposit)
+export const calculateTotalPrice = (car, quantity, tax, registrationFee, insuranceFee, deposit = 0, paymentMethod = "full") => {
+  const basePrice = car.price * quantity;
+  const taxAmount = car.price * tax;
+  const total = Math.round(basePrice + taxAmount + registrationFee + insuranceFee);
+
+  if (paymentMethod === "deposit") {
+    return {
+      totalPrice: total,
+      depositAmount: deposit,
+      remainingAmount: total - deposit
+    };
+  }
+
+  return { totalPrice: total };
+};
+
+// ✅ API cập nhật phương thức thanh toán cho Customer
+export const updatePaymentMethodForCustomer = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentMethod, bankDetails, qrCodeUrl } = req.body;
+
+    const validMethods = ["cash", "bank_transfer", "qr"];
+    if (!validMethods.includes(paymentMethod)) {
+      return res.status(400).json({ message: "Invalid payment method" });
     }
 
-    const order = await Order.findOne({ _id: id, customerId })
-      .populate("admin", "name")
-      .populate("carInfo", "-locationId")
-      .populate("location", "name")
-      .populate("customerId");
-
+    const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({ message: "Order not found or access denied" });
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    return res.status(200).json({
-      message: "✅ Order retrieved successfully",
-      data: order,
+    // Xử lý logic riêng cho từng phương thức
+    if (paymentMethod === "bank_transfer") {
+      if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber) {
+        return res.status(400).json({
+          message: "Bank name and account number are required for bank_transfer"
+        });
+      }
+      order.bankDetails = bankDetails;
+      order.qrCodeUrl = undefined; // clear QR nếu trước đó có
+    } else if (paymentMethod === "qr") {
+      if (!qrCodeUrl) {
+        return res.status(400).json({
+          message: "QR code URL is required for qr payment method"
+        });
+      }
+      order.qrCodeUrl = qrCodeUrl;
+      order.bankDetails = undefined; // clear bank details nếu trước đó có
+    } else {
+      // cash
+      order.bankDetails = undefined;
+      order.qrCodeUrl = undefined;
+    }
+
+    order.paymentMethod = paymentMethod;
+    await order.save();
+
+    res.json({ message: "Payment method updated successfully", order });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+// ✅ API cập nhật số tiền cọc cho Customer (có tính remainingAmount)
+export const updateDepositForCustomer = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { deposit } = req.body;
+
+    if (typeof deposit !== "number" || deposit <= 0) {
+      return res.status(400).json({ message: "Invalid deposit amount" });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const minDeposit = 0.3 * order.totalPrice;
+
+    if (
+      deposit !== order.totalPrice &&
+      (deposit < minDeposit || deposit > order.totalPrice)
+    ) {
+      return res.status(400).json({
+        message: `🚫 Deposit must be at least 30% (${Math.round(minDeposit)}) of totalPrice or equal to totalPrice (${order.totalPrice})`
+      });
+    }
+
+    // Gán deposit & remainingAmount
+    order.deposit = deposit;
+    order.remainingAmount = order.totalPrice - deposit;
+
+    await order.save();
+
+    res.json({
+      message: "Deposit updated successfully",
+      order
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "❌ Failed to get order",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+export const getAllOrderStatus = async (req, res) => {
+  try {
+    const orders = await Order.find({}, "status");
+    res.json({ message: "✅ Order statuses fetched successfully", statuses: orders });
+  } catch (error) {
+    res.status(500).json({ message: "❌ Failed to fetch statuses", error: error.message });
+  }
+};
+export const getAllOrderStatusConfirm = async (req, res) => {
+  try {
+    const orders = await Order.find({ status: "confirm" }, "status");
+    res.json({ message: "✅ Confirmed order statuses fetched successfully", statuses: orders });
+  } catch (error) {
+    res.status(500).json({ message: "❌ Failed to fetch confirmed statuses", error: error.message });
   }
 };

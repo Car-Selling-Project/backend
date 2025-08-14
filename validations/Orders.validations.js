@@ -11,7 +11,6 @@ const nameRegex = /^\p{Lu}\p{Ll}*(\s\p{Lu}\p{Ll}*)*$/u;
 const phoneRegex = new RegExp(`^(${validPhonePrefixes.join('|')})\\d{7}$`);
 const citizenIdRegex = /^0\d{11}$/;
 
-
 const noWhitespace = (fieldName) => (value, helpers) => {
   if (typeof value !== 'string') return value;
   if (value.trim() !== value) {
@@ -42,20 +41,41 @@ const orderValidationSchema = Joi.object({
       'string.hex': 'Location ID must be a valid hex string'
     }),
 
-  deposit: Joi.number().integer().min(0).default(0),
+totalPrice: Joi.number()
+  .integer()
+  .min(0)
+  .forbidden(), // Không cho phép client gửi vào
 
-  paymentMethod: Joi.string().valid('cash', 'bank_transfer', 'loan').default('cash'),
 
-  totalPrice: Joi.number().integer().min(0).required(),
+  deposit: Joi.number()
+    .integer()
+    .min(0)
+    .default(0)
+    .custom((value, helpers) => {
+      const { totalPrice } = helpers.state.ancestors[0];
+      if (!totalPrice) return value; // Chưa có totalPrice thì skip
+      if (value === 0) return value; // Cho phép 0 khi chưa cọc
+      const minDeposit = 0.3 * totalPrice;
+      if (value === totalPrice || (value >= minDeposit && value < totalPrice)) {
+        return value;
+      }
+      return helpers.message(
+        `🚫 Deposit must be at least 30% (${Math.round(minDeposit)}) of totalPrice or equal to totalPrice (${totalPrice})`
+      );
+    }),
+
+  paymentMethod: Joi.string()
+    .valid('cash', 'bank_transfer', 'loan', 'qr', 'deposit')
+    .default('cash'),
 
   customerId: Joi.string()
-  .hex()
-  .required()
-  .custom(noWhitespace('Customer ID'))
-  .message({
-    'string.empty': 'Customer ID is required',
-    'string.hex': 'Customer ID must be a valid hex string'
-  }),
+    .hex()
+    .required()
+    .custom(noWhitespace('Customer ID'))
+    .messages({
+      'string.empty': 'Customer ID is required',
+      'string.hex': 'Customer ID must be a valid hex string'
+    }),
 
   customerInfo: Joi.object({
     fullName: Joi.string()
@@ -120,8 +140,10 @@ const orderValidationSchema = Joi.object({
     url: Joi.string().uri().optional(),
     signed: Joi.boolean().default(false)
   }).optional(),
+  quantity: Joi.number().integer().min(1).required(),
 
   status: Joi.string().valid('pending', 'confirmed', 'canceled').default('pending')
 });
+
 
 export default orderValidationSchema;
