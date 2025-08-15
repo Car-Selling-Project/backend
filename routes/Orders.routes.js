@@ -22,7 +22,7 @@ OrderRouter.post("/orders" , authAdmin , validateRequest(orderValidationSchema) 
 OrderRouter.get("/orders" , authAdmin , getAllOrders);
 OrderRouter.get("/orders/:id" , authAdmin , getOrderById);
 OrderRouter.patch("/orders/:id", authAdmin , validateRequest(updateOrderValidationSchema), updateOrderById);
-OrderRouter.patch("/orders/:id/confirm" , authAdmin , confirmOrder);
+OrderRouter.patch("/orders/:orderId/confirm", authAdmin, confirmOrder);
 OrderRouter.patch("/orders/:id/canceled", authAdmin , canceledOrder);
 OrderRouter.get("/orders/confirm", authCustomer, getAllOrderStatusConfirm);
 OrderRouter.get("/orders", authCustomer, getAllOrderStatus);

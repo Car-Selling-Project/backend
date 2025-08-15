@@ -16,13 +16,12 @@ const fonts = {
   },
 };
 
-// ====== Sign Contract for SELLER ======
 export const signContractSeller = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { signatureImage } = req.body;
 
-    // Lấy order + populate data liên quan
+    // Lấy order + populate dữ liệu liên quan
     const order = await Order.findById(orderId)
       .populate({
         path: "carInfo",
@@ -33,41 +32,34 @@ export const signContractSeller = async (req, res) => {
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Cập nhật thông tin ký
     if (!order.contract) order.contract = {};
+
+    // Cập nhật thông tin ký seller
     order.contract.signedBySeller = true;
-    order.contract.signedBySellerName = order.admin?.name || "";
-    order.contract.signedBySellerAt = new Date(); // always use current date
+    order.contract.signedBySellerName = order.admin?.name || "N/A";
+    order.contract.signedBySellerAt = new Date();
+    if (signatureImage) order.contract.signatureImageBySeller = signatureImage;
 
-    // Lưu chữ ký (ảnh hoặc text)
-    if (signatureImage) {
-      order.contract.signatureImageSeller = signatureImage;
-    }
+    // Cập nhật trạng thái tổng thể
+    order.contract.signed = order.contract.signedBySeller && order.contract.signedByBuyer;
 
-    if (order.contract.signedByBuyer) {
-      order.contract.signed = true;
-    }
-
-    // Tạo lại PDF với chữ ký mới bằng puppeteer
-    const buyer = order.customerInfo;
+    const buyer = order.customerId;
     const car = order.carInfo;
     const contractDate = new Date().toLocaleDateString();
-    // Chèn chữ ký seller vào HTML
-    let sellerSignHTML = "";
-    const sig = order.contract.signatureImageSeller;
-    if (sig) {
-      // Nếu là base64 hoặc url ảnh
-      const isImage = typeof sig === 'string' && (sig.startsWith('data:image') || sig.startsWith('http'));
-      if (isImage) {
-        sellerSignHTML += `<img src='${sig}' alt='Seller Signature' style='max-width:180px;max-height:10px;display:block;margin:0 auto 0 auto;' />`;
-      }
-      // Nếu là text (không phải ảnh)
-      if (typeof sig === 'string' && !isImage) {
-        sellerSignHTML += `<div style='font-family:monospace;font-size:1.1rem;color:#222;margin-top:4px;max-height:10px;'>${sig}</div>`;
-      }
-    } else {
-      sellerSignHTML = `<div style='font-style:italic;color:#888;'>Chưa có chữ ký</div>`;
-    }
+
+    // Hàm helper render chữ ký (text hoặc ảnh)
+    const renderSignature = (sig) => {
+      if (!sig) return `<div style='font-style:italic;color:#888;'>Chưa có chữ ký</div>`;
+      const isImage = typeof sig === 'string' && (sig.startsWith("data:image") || sig.startsWith("http"));
+      return isImage
+        ? `<img src='${sig}' alt='Signature' style='max-width:180px;max-height:60px;display:block;margin:0 auto;' />`
+        : `<div style='font-family:monospace;font-size:1.1rem;color:#222;margin-top:4px;'>${sig}</div>`;
+    };
+
+    const sellerSignHTML = renderSignature(order.contract.signatureImageBySeller);
+    const buyerSignHTML = renderSignature(order.contract.signatureImageByBuyer);
+
+    // Giữ nguyên HTML gốc, chỉ thay chữ ký
     const contractHTML = `<!DOCTYPE html><html><head><meta charset='utf-8'><style>
       body { font-family: Arial, sans-serif; font-size: 14px; background: #fff; color: #222; margin: 0; }
       .contract-container { max-width: 700px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px 36px 28px 36px; border: 1px solid #e3e3e3; }
@@ -84,20 +76,20 @@ export const signContractSeller = async (req, res) => {
       <div class='contract-container'>
       <h2>CAR SALE AGREEMENT</h2>
       <table class='contract-table'>
-      <tr><td class='label'>Seller:</td><td class='value'>${order.admin?.name || ""}</td></tr>
-      <tr><td class='label'>Buyer:</td><td class='value'>${buyer?.fullName || ""}</td></tr>
-      <tr><td class='label'>Vehicle:</td><td class='value'>${car?.title || ""} (${car?.brandId?.name || ""}, ${car?.model || ""})</td></tr>
-      <tr><td class='label'>Vehicle Identification Number:</td><td class='value'>${car?.vin || "__________"}</td></tr>
+        <tr><td class='label'>Seller:</td><td class='value'>${order.admin?.name || "N/A"}</td></tr>
+        <tr><td class='label'>Buyer:</td><td class='value'>${buyer?.fullName || ""}</td></tr>
+        <tr><td class='label'>Vehicle:</td><td class='value'>${car?.title || ""} (${car?.brandId?.name || ""}, ${car?.model || ""})</td></tr>
+        <tr><td class='label'>Vehicle Identification Number:</td><td class='value'>${car?.vin || "__________"}</td></tr>
       </table>
       <div class='section-title'>Terms:</div>
       <ol style='margin-left:18px;'>
-      <li>The date of the sale of the Vehicle will be <b>${contractDate}</b>.</li>
-      <li>The total purchase price of the Vehicle will be <b>${order.totalPrice ? `$${order.totalPrice.toFixed(2)}` : "__________"}</b> Dollars </li>
-      <li>In exchange for the Vehicle, the Buyer will pay Seller the total purchase price of the Vehicle on the day of the sale by cashier’s check, money order, or cash.</li>
-      <li>Upon receipt of payment as provided above, The Seller agrees to provide the following documents to Buyer on the sale date:<br>&bull; Certificate of Title (including Odometer Disclosure Section), signed by Seller.<br>&bull; The current registration for the Vehicle.</li>
-      <li>The Seller agrees to deliver the Vehicle to Buyer with a current registration and a clear title. Seller warrants that Seller is the legal owner of the Vehicle and that the Vehicle is free of all legal claims, liens, and encumbrances. The Seller agrees to pay for and deliver any necessary smog certification to Buyer before the sale date.</li>
-      <li>The Vehicle is sold "as is," and the Seller makes no express or implied warranties as to the condition or performance of the Vehicle, except as follows: to the best of Seller’s knowledge, this vehicle:<br><input type='checkbox'> is <input type='checkbox'> is not a salvage vehicle.<br><input type='checkbox'> has <input type='checkbox'> has not been declared a total loss by an insurance company.<br><input type='checkbox'> has <input type='checkbox'> has not been repaired pursuant to a Lemon Law.</li>
-      <li>The Buyer agrees to register the Vehicle in his/her name with the California Department of Motor Vehicles within one week of the date of the sale.</li>
+        <li>The date of the sale of the Vehicle will be <b>${contractDate}</b>.</li>
+        <li>The total purchase price of the Vehicle will be <b>${order.totalPrice ? `$${order.totalPrice.toFixed(2)}` : "__________"}</b> Dollars </li>
+        <li>In exchange for the Vehicle, the Buyer will pay Seller the total purchase price of the Vehicle on the day of the sale by cashier’s check, money order, or cash.</li>
+        <li>Upon receipt of payment as provided above, The Seller agrees to provide the following documents to Buyer on the sale date:<br>&bull; Certificate of Title (including Odometer Disclosure Section), signed by Seller.<br>&bull; The current registration for the Vehicle.</li>
+        <li>The Seller agrees to deliver the Vehicle to Buyer with a current registration and a clear title. Seller warrants that Seller is the legal owner of the Vehicle and that the Vehicle is free of all legal claims, liens, and encumbrances. The Seller agrees to pay for and deliver any necessary smog certification to Buyer before the sale date.</li>
+        <li>The Vehicle is sold "as is," and the Seller makes no express or implied warranties as to the condition or performance of the Vehicle, except as follows: to the best of Seller’s knowledge, this vehicle:<br><input type='checkbox'> is <input type='checkbox'> is not a salvage vehicle.<br><input type='checkbox'> has <input type='checkbox'> has not been declared a total loss by an insurance company.<br><input type='checkbox'> has <input type='checkbox'> has not been repaired pursuant to a Lemon Law.</li>
+        <li>The Buyer agrees to register the Vehicle in his/her name with the California Department of Motor Vehicles within one week of the date of the sale.</li>
       </ol>
       <div class='sign-footer'>
         <div>
@@ -105,22 +97,23 @@ export const signContractSeller = async (req, res) => {
           <br>
           <div>${sellerSignHTML}</div>
           <br>
-          <div class='sign-name'>${order.admin?.name || ""}</div>
+          <div class='sign-name'>${order.admin?.name || "N/A"}</div>
           <br>
-          <div>Date: ${order.contract.signedBySellerAt ? order.contract.signedBySellerAt.toLocaleDateString?.() || order.contract.signedBySellerAt : "__________"}</div>
+          <div>Date: ${order.contract.signedBySellerAt ? order.contract.signedBySellerAt.toLocaleDateString() : "__________"}</div>
         </div>
         <div>
           <div class='sign-label'>Name of Buyer</div>
           <br>
-          <br>
+          <div>${buyerSignHTML}</div>
           <br>
           <div class='sign-name'>${buyer?.fullName || ""}</div>
           <br>
-          <div>Date: ____________</div>
+          <div>Date: ${order.contract.signedByBuyerAt ? order.contract.signedByBuyerAt.toLocaleDateString() : "__________"}</div>
         </div>
       </div>
       </div></body></html>`;
-    // Render HTML thành PDF bằng puppeteer
+
+    // Render HTML thành PDF
     let pdfBuffer;
     try {
       const browser = await puppeteer.launch();
@@ -131,36 +124,23 @@ export const signContractSeller = async (req, res) => {
     } catch (err) {
       return res.status(500).json({ message: 'Failed to generate PDF', error: err });
     }
+
     // Upload PDF lên Cloudinary
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
     order.contract.url = pdfUrl;
+
     await order.save();
+
     res.json({
       message: "Seller signed contract successfully, contract updated",
       contract: order.contract,
     });
+
   } catch (error) {
     console.error("Error in signContractSeller:", error);
-    // Log key variables for debugging
-    console.error("orderId:", req.params?.orderId);
-    console.error("signatureImage:", req.body?.signatureImage);
-    res.status(500).json({ message: "Server error", error: error?.message, stack: error?.stack });
+    res.status(500).json({ message: "Server error (seller)", error: error?.message, stack: error?.stack });
   }
 };
-
-function makeTable(rows) {
-  // Trả về HTML table string
-  const filteredRows = rows.filter(([label, value]) => label || value);
-  let html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">';
-  html += '<tr><th style="border:1px solid #aaa; padding:4px;">Field</th><th style="border:1px solid #aaa; padding:4px;">Value</th></tr>';
-  filteredRows.forEach(([label, value]) => {
-    html += `<tr><td style="border:1px solid #aaa; padding:4px; text-align:center;">${label || ''}</td><td style="border:1px solid #aaa; padding:4px; text-align:center;">${value || ''}</td></tr>`;
-  });
-  html += '</table>';
-  return html;
-}
-
-
 
 // ====== GET CONTRACT STATUS ======
 export const getContractStatus = async (req, res) => {
@@ -277,16 +257,18 @@ export const createContract = async (req, res) => {
     // Upload PDF lên Cloudinary
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
 
-    order.contract = {
-      url: pdfUrl,
-      signedBySeller: false,
-      signedBySellerName: null,
-      signedBySellerAt: null,
-      signedByBuyer: false,
-      signedByBuyerName: null,
-      signedByBuyerAt: null,
-      signed: false,
-    };
+order.contract = {
+  url: pdfUrl,
+  signedBySeller: false,
+  signedBySellerName: null,
+  signedBySellerAt: null,
+  signatureImageBySeller: null, // đúng với schema
+  signedByBuyer: false,
+  signedByBuyerName: null,
+  signedByBuyerAt: null,
+  signatureImageByBuyer: null,  // đúng với schema
+  signed: false,
+};
 
     await order.save();
 
@@ -306,7 +288,7 @@ export const signContractBuyer = async (req, res) => {
     const { orderId } = req.params;
     const { signatureImage } = req.body;
 
-    // Lấy order + populate data liên quan
+    // Lấy order + populate dữ liệu liên quan
     const order = await Order.findById(orderId)
       .populate({
         path: "carInfo",
@@ -317,41 +299,51 @@ export const signContractBuyer = async (req, res) => {
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
+    // Nếu không có admin, gán tạm admin là object với name = 'N/A'
+    if (!order.admin) order.admin = { name: 'N/A' };
+
+    // Chỉ cho phép customer ký nếu đúng customerId
+    let orderCustomerId = order.customerId;
+    if (orderCustomerId && typeof orderCustomerId === 'object' && orderCustomerId._id) {
+      orderCustomerId = orderCustomerId._id;
+    }
+    if (!req.customer || String(req.customer._id) !== String(orderCustomerId)) {
+      return res.status(403).json({ 
+        message: "Forbidden: Only the order's customer can sign this contract",
+        debug: {
+          reqCustomerId: req.customer?._id,
+          orderCustomerId: orderCustomerId
+        }
+      });
+    }
+
     // Cập nhật thông tin ký
     if (!order.contract) order.contract = {};
     order.contract.signedByBuyer = true;
-    order.contract.signedByBuyerName = order.customerId?.fullName || "";
-    order.contract.signedByBuyerAt = new Date(); // always use current date
+    order.contract.signedByBuyerName = order.customerInfo?.fullName || "";
+    order.contract.signedByBuyerAt = new Date();
+    if (signatureImage) order.contract.signatureImageByBuyer = signatureImage;
 
-    // Lưu chữ ký (ảnh hoặc text)
-    if (signatureImage) {
-      order.contract.signatureImageBuyer = signatureImage;
-    }
+    // Cập nhật trạng thái signed tổng thể
+    order.contract.signed = order.contract.signedBySeller && order.contract.signedByBuyer;
 
-    if (order.contract.signedBySeller) {
-      order.contract.signed = true;
-    }
-
-    // Tạo lại PDF với chữ ký mới bằng puppeteer
     const buyer = order.customerInfo;
     const car = order.carInfo;
     const contractDate = new Date().toLocaleDateString();
-    // Chèn chữ ký buyer vào HTML
-    let buyerSignHTML = "";
-    const sig = order.contract.signatureImageBuyer;
-    if (sig) {
-      // Nếu là base64 hoặc url ảnh
-      const isImage = typeof sig === 'string' && (sig.startsWith('data:image') || sig.startsWith('http'));
-      if (isImage) {
-        buyerSignHTML += `<img src='${sig}' alt='Buyer Signature' style='max-width:180px;max-height:10px;display:block;margin:0 auto 0 auto;' />`;
-      }
-      // Nếu là text (không phải ảnh)
-      if (typeof sig === 'string' && !isImage) {
-        buyerSignHTML += `<div style='font-family:monospace;font-size:1.1rem;color:#222;margin-top:4px;'>${sig}</div>`;
-      }
-    } else {
-      buyerSignHTML = `<div style='font-style:italic;color:#888;'>Chưa có chữ ký</div>`;
-    }
+
+    // Hàm helper render chữ ký (text hoặc ảnh)
+    const renderSignature = (sig) => {
+      if (!sig) return `<div style='font-style:italic;color:#888;'>Chưa có chữ ký</div>`;
+      const isImage = typeof sig === 'string' && (sig.startsWith("data:image") || sig.startsWith("http"));
+      return isImage
+        ? `<img src='${sig}' alt='Signature' style='max-width:180px;max-height:60px;display:block;margin:0 auto;' />`
+        : `<div style='font-family:monospace;font-size:1.1rem;color:#222;margin-top:4px;'>${sig}</div>`;
+    };
+
+    const sellerSignHTML = renderSignature(order.contract.signatureImageBySeller);
+    const buyerSignHTML = renderSignature(order.contract.signatureImageByBuyer);
+
+    // Giữ nguyên HTML gốc, chỉ thay chữ ký
     const contractHTML = `<!DOCTYPE html><html><head><meta charset='utf-8'><style>
       body { font-family: Arial, sans-serif; font-size: 14px; background: #fff; color: #222; margin: 0; }
       .contract-container { max-width: 700px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px 36px 28px 36px; border: 1px solid #e3e3e3; }
@@ -368,20 +360,20 @@ export const signContractBuyer = async (req, res) => {
       <div class='contract-container'>
       <h2>CAR SALE AGREEMENT</h2>
       <table class='contract-table'>
-      <tr><td class='label'>Seller:</td><td class='value'>${order.admin?.name || ""}</td></tr>
-      <tr><td class='label'>Buyer:</td><td class='value'>${buyer?.fullName || ""}</td></tr>
-      <tr><td class='label'>Vehicle:</td><td class='value'>${car?.title || ""} (${car?.brandId?.name || ""}, ${car?.model || ""})</td></tr>
-      <tr><td class='label'>Vehicle Identification Number:</td><td class='value'>${car?.vin || "__________"}</td></tr>
+        <tr><td class='label'>Seller:</td><td class='value'>${order.admin?.name || "N/A"}</td></tr>
+        <tr><td class='label'>Buyer:</td><td class='value'>${buyer?.fullName || ""}</td></tr>
+        <tr><td class='label'>Vehicle:</td><td class='value'>${car?.title || ""} (${car?.brandId?.name || ""}, ${car?.model || ""})</td></tr>
+        <tr><td class='label'>Vehicle Identification Number:</td><td class='value'>${car?.vin || "__________"}</td></tr>
       </table>
       <div class='section-title'>Terms:</div>
       <ol style='margin-left:18px;'>
-      <li>The date of the sale of the Vehicle will be <b>${contractDate}</b>.</li>
-      <li>The total purchase price of the Vehicle will be <b>${order.totalPrice ? `$${order.totalPrice.toFixed(2)}` : "__________"}</b> Dollars </li>
-      <li>In exchange for the Vehicle, the Buyer will pay Seller the total purchase price of the Vehicle on the day of the sale by cashier’s check, money order, or cash.</li>
-      <li>Upon receipt of payment as provided above, The Seller agrees to provide the following documents to Buyer on the sale date:<br>&bull; Certificate of Title (including Odometer Disclosure Section), signed by Seller.<br>&bull; The current registration for the Vehicle.</li>
-      <li>The Seller agrees to deliver the Vehicle to Buyer with a current registration and a clear title. Seller warrants that Seller is the legal owner of the Vehicle and that the Vehicle is free of all legal claims, liens, and encumbrances. The Seller agrees to pay for and deliver any necessary smog certification to Buyer before the sale date.</li>
-      <li>The Vehicle is sold "as is," and the Seller makes no express or implied warranties as to the condition or performance of the Vehicle, except as follows: to the best of Seller’s knowledge, this vehicle:<br><input type='checkbox'> is <input type='checkbox'> is not a salvage vehicle.<br><input type='checkbox'> has <input type='checkbox'> has not been declared a total loss by an insurance company.<br><input type='checkbox'> has <input type='checkbox'> has not been repaired pursuant to a Lemon Law.</li>
-      <li>The Buyer agrees to register the Vehicle in his/her name with the California Department of Motor Vehicles within one week of the date of the sale.</li>
+        <li>The date of the sale of the Vehicle will be <b>${contractDate}</b>.</li>
+        <li>The total purchase price of the Vehicle will be <b>${order.totalPrice ? `$${order.totalPrice.toFixed(2)}` : "__________"}</b> Dollars </li>
+        <li>In exchange for the Vehicle, the Buyer will pay Seller the total purchase price of the Vehicle on the day of the sale by cashier’s check, money order, or cash.</li>
+        <li>Upon receipt of payment as provided above, The Seller agrees to provide the following documents to Buyer on the sale date:<br>&bull; Certificate of Title (including Odometer Disclosure Section), signed by Seller.<br>&bull; The current registration for the Vehicle.</li>
+        <li>The Seller agrees to deliver the Vehicle to Buyer with a current registration and a clear title. Seller warrants that Seller is the legal owner of the Vehicle and that the Vehicle is free of all legal claims, liens, and encumbrances. The Seller agrees to pay for and deliver any necessary smog certification to Buyer before the sale date.</li>
+        <li>The Vehicle is sold "as is," and the Seller makes no express or implied warranties as to the condition or performance of the Vehicle, except as follows: to the best of Seller’s knowledge, this vehicle:<br><input type='checkbox'> is <input type='checkbox'> is not a salvage vehicle.<br><input type='checkbox'> has <input type='checkbox'> has not been declared a total loss by an insurance company.<br><input type='checkbox'> has <input type='checkbox'> has not been repaired pursuant to a Lemon Law.</li>
+        <li>The Buyer agrees to register the Vehicle in his/her name with the California Department of Motor Vehicles within one week of the date of the sale.</li>
       </ol>
       <div class='sign-footer'>
         <div>
@@ -389,9 +381,9 @@ export const signContractBuyer = async (req, res) => {
           <br>
           <div>${sellerSignHTML}</div>
           <br>
-          <div class='sign-name'>${order.admin?.name || ""}</div>
+          <div class='sign-name'>${order.admin?.name || "N/A"}</div>
           <br>
-          <div>Date: ____________</div>
+          <div>Date: ${order.contract.signedBySellerAt ? order.contract.signedBySellerAt.toLocaleDateString() : "__________"}</div>
         </div>
         <div>
           <div class='sign-label'>Name of Buyer</div>
@@ -400,10 +392,11 @@ export const signContractBuyer = async (req, res) => {
           <br>
           <div class='sign-name'>${buyer?.fullName || ""}</div>
           <br>
-          <div>Date: ${order.contract.signedByBuyerAt ? order.contract.signedByBuyerAt.toLocaleDateString?.() || order.contract.signedByBuyerAt : "__________"}</div>
+          <div>Date: ${order.contract.signedByBuyerAt ? order.contract.signedByBuyerAt.toLocaleDateString() : "__________"}</div>
         </div>
       </div>
       </div></body></html>`;
+
     // Render HTML thành PDF bằng puppeteer
     let pdfBuffer;
     try {
@@ -415,22 +408,23 @@ export const signContractBuyer = async (req, res) => {
     } catch (err) {
       return res.status(500).json({ message: 'Failed to generate PDF', error: err });
     }
+
     // Upload PDF lên Cloudinary
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
     order.contract.url = pdfUrl;
     await order.save();
+
     res.json({
       message: "Buyer signed contract successfully, contract updated",
       contract: order.contract,
     });
+
   } catch (error) {
     console.error("Error in signContractBuyer:", error);
-    // Log key variables for debugging
-    console.error("orderId:", req.params?.orderId);
-    console.error("signatureImage:", req.body?.signatureImage);
     res.status(500).json({ message: "Server error (buyer)", error: error?.message, stack: error?.stack });
   }
 };
+
 export const getContractStatusForCustomer = async(req , res) =>{
   try{
     const { orderId } = req.params;

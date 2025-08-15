@@ -21,10 +21,11 @@ import CarRouter from "./routes/Cars.routes.js";
 import CompareCarRouter from "./routes/CompareCars.routes.js";
 import DashboardStatRouter from "./routes/DashBoardStat.routes.js";
 import OrderRouter from "./routes/Orders.routes.js";
-import ContractRouter from "./routes/Contracts.routes.js";
+import { AdminContractRouter, CustomerContractRouter } from "./routes/Contracts.routes.js";
 import LocationRouter from "./routes/Locations.route.js";
 import BrandRouter from "./routes/Brands.routes.js";
 import TestDriveRouter from "./routes/TestDrive.routes.js";
+import  PaymentRouter from "./routes/Payment.routes.js";
 // ✅ Load biến môi trường từ .env
 dotenv.config();
 
@@ -84,9 +85,11 @@ app.use("/customers", CarRouter);
 app.use("/customers" , CompareCarRouter);
 app.use("/customers", LocationRouter);
 app.use("/customers" , BrandRouter);
-app.use("/customers", ContractRouter);
+app.use("/customers", CustomerContractRouter);
 app.use("/customers", TestDriveRouter);
 app.use("/customers", OrderRouter);
+app.use("/customers", PaymentRouter);
+
 
 // Admins
 app.use("/admins", RegisterAdminsRouter);
@@ -95,10 +98,11 @@ app.use("/admins", resetPasswordAdminRouter);
 app.use("/admins" , CRUDCarsRouter);
 app.use("/admins" , DashboardStatRouter);
 app.use("/admins", OrderRouter);
-app.use("/admins" , ContractRouter);
+app.use("/admins" , AdminContractRouter);
 app.use("/admins", LocationRouter);
 app.use("/admins", BrandRouter);
 app.use("/admins", TestDriveRouter);
+app.use("/admins", PaymentRouter);
 // ✅ Export app để dùng trong test
 export default app;
 

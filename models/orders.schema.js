@@ -40,7 +40,7 @@ const orderSchema = new mongoose.Schema({
   qrCodeUrl: { type: String }, // chỉ dùng nếu paymentMethod === "qr"
   paymentStatus: {
     type: String,
-    enum: ["pending", "completed", "failed"],
+    enum: ["pending", "confirmed", "failed"],
     default: "pending"
   },
   totalPrice: {
@@ -65,15 +65,19 @@ const orderSchema = new mongoose.Schema({
     address: { type: String, required: true }
   },
   contract: {
-    url: { type: String },
-    signed: { type: Boolean, default: false },
-    signedBySeller: { type: Boolean, default: false },
-    signedBySellerName: { type: String },
-    signedBySellerAt: { type: Date },
-    signedByBuyer: { type: Boolean, default: false },
-    signedByBuyerName: { type: String },
-    signedByBuyerAt: { type: Date }
-  },
+  url: { type: String },                    // link hợp đồng PDF
+  signed: { type: Boolean, default: false }, // tổng quan đã ký đủ chưa
+  signedBySeller: { type: Boolean, default: false },
+  signedBySellerName: { type: String },
+  signedBySellerAt: { type: Date },
+  signatureImageBySeller: { type: String }, // lưu ảnh chữ ký seller
+
+  signedByBuyer: { type: Boolean, default: false },
+  signedByBuyerName: { type: String },
+  signedByBuyerAt: { type: Date },
+  signatureImageByBuyer: { type: String }   // lưu ảnh chữ ký buyer
+}
+,
   status: {
     type: String,
     enum: ["pending", "confirmed", "canceled"],

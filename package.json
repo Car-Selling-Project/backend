@@ -40,7 +40,9 @@
     "pdfkit-table": "^0.1.99",
     "pdfmake": "^0.2.20",
     "puppeteer": "^24.16.2",
+    "qrcode": "^1.5.4",
     "streamifier": "^0.1.1",
+    "stripe": "^18.4.0",
     "tslib": "^2.8.1"
   },
   "devDependencies": {

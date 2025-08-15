@@ -156,7 +156,6 @@ export const updateOrderById = async (req, res) => {
   }
 };
 
-// Confirm Order
 export const confirmOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -166,15 +165,27 @@ export const confirmOrder = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    // Kiểm tra deposit
     const hasDeposit = order.deposit && order.deposit > 0;
-    const isPaidFull = order.totalPaid >= order.totalPrice;
-    const contractSigned = order.contract && order.contract.isSigned;
 
+    // Kiểm tra thanh toán đầy đủ (dựa trên deposit hoặc tổng các khoản thanh toán)
+    const isPaidFull = order.deposit >= order.totalPrice; // thay bằng logic tổng các khoản nếu cần
+
+    // Kiểm tra hợp đồng đã ký
+    const contractSigned = Boolean(order.contract?.signed);
+
+    // Nếu tất cả điều kiện đạt
     if (hasDeposit && isPaidFull && contractSigned) {
       order.status = "confirmed";
+      order.paymentStatus = "confirmed";
       await order.save();
-      return res.status(200).json({ message: "Order confirmed successfully", order });
+
+      return res.status(200).json({
+        message: "Order confirmed successfully",
+        order
+      });
     } else {
+      // Nếu còn thiếu điều kiện
       return res.status(200).json({
         message: "Order still pending, missing required conditions",
         missing: {
@@ -188,9 +199,10 @@ export const confirmOrder = async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 // Cancel Order
