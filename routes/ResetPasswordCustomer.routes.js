@@ -22,7 +22,7 @@ resetPasswordCustomerRouter.post(
 );
 
 // ✅ Route 2: Đặt lại mật khẩu (cần credentials nếu dùng cookie)
-resetPasswordCustomerRouter.patch(
+resetPasswordCustomerRouter.post(
   "/reset-password",
   corsWithCredentials,
   resetPasswordLimiter,

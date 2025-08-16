@@ -24,7 +24,7 @@ resetPasswordAdminRouter.post(
   checkEmployeeCodeExists
 );
 
-resetPasswordAdminRouter.patch(
+resetPasswordAdminRouter.post(
   "/reset-password",
   corsWithCredentials, // Chỉ route này cần session/cookie
   resetPasswordLimiter,
