@@ -1,10 +1,10 @@
 import Joi from 'joi';
 
 const validPhonePrefixes = [
-  '086', '096', '097', '098', '032', '033', '034', '035', '036', '037', '038', '039',
-  '088', '091', '094', '083', '084', '085', '081', '082',
-  '089', '090', '093', '070', '079', '077', '076', '078',
-  '092', '056', '058', '099', '059'
+  '086','096','097','098','032','033','034','035','036','037','038','039',
+  '088','091','094','083','084','085','081','082',
+  '089','090','093','070','079','077','076','078',
+  '092','056','058','099','059'
 ];
 
 const nameRegex = /^\p{Lu}\p{Ll}*(\s\p{Lu}\p{Ll}*)*$/u;
@@ -41,11 +41,10 @@ const orderValidationSchema = Joi.object({
       'string.hex': 'Location ID must be a valid hex string'
     }),
 
-totalPrice: Joi.number()
-  .integer()
-  .min(0)
-  .forbidden(), // Không cho phép client gửi vào
-
+  totalPrice: Joi.number()
+    .integer()
+    .min(0)
+    .forbidden(), // Không cho phép client gửi vào
 
   deposit: Joi.number()
     .integer()
@@ -53,8 +52,8 @@ totalPrice: Joi.number()
     .default(0)
     .custom((value, helpers) => {
       const { totalPrice } = helpers.state.ancestors[0];
-      if (!totalPrice) return value; // Chưa có totalPrice thì skip
-      if (value === 0) return value; // Cho phép 0 khi chưa cọc
+      if (!totalPrice) return value; 
+      if (value === 0) return value; 
       const minDeposit = 0.3 * totalPrice;
       if (value === totalPrice || (value >= minDeposit && value < totalPrice)) {
         return value;
@@ -65,8 +64,23 @@ totalPrice: Joi.number()
     }),
 
   paymentMethod: Joi.string()
-    .valid('cash', 'bank_transfer', 'loan', 'qr', 'deposit')
+    .valid('cash', 'bank_transfer', 'qr')
     .default('cash'),
+
+  bankDetails: Joi.when('paymentMethod', {
+    is: 'bank_transfer',
+    then: Joi.object({
+      bankName: Joi.string().required(),
+      bankAccountNumber: Joi.string().required()
+    }).required(),
+    otherwise: Joi.forbidden()
+  }),
+
+  qrCodeUrl: Joi.when('paymentMethod', {
+    is: 'qr',
+    then: Joi.string().uri().required(),
+    otherwise: Joi.forbidden()
+  }),
 
   customerId: Joi.string()
     .hex()
@@ -140,10 +154,15 @@ totalPrice: Joi.number()
     url: Joi.string().uri().optional(),
     signed: Joi.boolean().default(false)
   }).optional(),
-  quantity: Joi.number().integer().min(1).required(),
 
-  status: Joi.string().valid('pending', 'confirmed', 'canceled').default('pending')
+  quantity: Joi.number()
+    .integer()
+    .min(1)
+    .required(),
+
+  status: Joi.string()
+    .valid('pending', 'confirmed', 'canceled')
+    .default('pending')
 });
-
 
 export default orderValidationSchema;

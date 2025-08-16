@@ -91,7 +91,8 @@ const orderSchema = new mongoose.Schema({
       validator: Number.isInteger,
       message: "🚫 quantity must be an integer"
     }
-  }
+  },
+  stripePaymentIntentId: { type: String, default: null, index: true }
 }, {
   timestamps: true
 });
