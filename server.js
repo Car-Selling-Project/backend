@@ -41,6 +41,19 @@ connectDB()
 // ✅ Cấu hình CORS
 const allowedOrigins = ["http://localhost:5173"];
 
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("❌ Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST" , "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your-secret-key",
@@ -73,7 +86,6 @@ app.use("/customers" , CompareCarRouter);
 app.use("/customers", LocationRouter);
 app.use("/customers" , BrandRouter);
 app.use("/customers", CustomerContractRouter);
-app.use("/customers", CustomerContractRouter);
 app.use("/customers", TestDriveRouter);
 app.use("/customers", OrderRouter);
 app.use("/customers", PaymentRouter);
@@ -86,7 +98,6 @@ app.use("/admins", resetPasswordAdminRouter);
 app.use("/admins" , CRUDCarsRouter);
 app.use("/admins" , DashboardStatRouter);
 app.use("/admins", OrderRouter);
-app.use("/admins" , AdminContractRouter);
 app.use("/admins" , AdminContractRouter);
 app.use("/admins", LocationRouter);
 app.use("/admins", BrandRouter);
