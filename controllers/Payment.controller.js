@@ -25,18 +25,15 @@ const createDynamicQR = async (order, clientSecret) => {
 // CREATE payment
 export const createPayment = async (req, res) => {
     try {
-        const { orderId } = req.body;
+        const { orderId, token } = req.body; // FE gửi kèm token nếu bank_transfer
         const order = await Order.findById(orderId);
-        if (!order) {
-            console.error(`Error: Order with ID ${orderId} not found.`);
-            return res.status(404).json({ message: "Order not found" });
-        }
-        if (order.paymentStatus !== "pending") {
-            console.error(`Error: Order ${orderId} is not in pending payment status. Current status: ${order.paymentStatus}`);
+        if (!order) return res.status(404).json({ message: "Order not found" });
+        if (order.paymentStatus !== "pending")
             return res.status(400).json({ message: `Order not in pending payment status` });
-        }
 
-        // Trường hợp thanh toán tiền mặt → xác nhận thủ công
+        // -----------------------------
+        // CASE 1: Cash
+        // -----------------------------
         if (order.paymentMethod === "cash") {
             return res.json({
                 message: "Cash payment pending, confirm manually",
@@ -45,43 +42,85 @@ export const createPayment = async (req, res) => {
             });
         }
 
-        // Trường hợp thanh toán qua Stripe (chuyển khoản ngân hàng / QR)
-        let paymentIntent;
-        if (!order.stripePaymentIntentId) {
-            console.log(`Creating new PaymentIntent for order ID: ${orderId}`);
-            const amount = Math.round(order.totalPrice) * 100;
-            paymentIntent = await stripe.paymentIntents.create({
-                amount,
-                currency: "usd",
-                metadata: { orderId: order._id.toString(), paymentMethod: order.paymentMethod },
-            });
-            order.stripePaymentIntentId = paymentIntent.id;
-
-            // Nếu là QR → tạo QR chứa clientSecret
-            if (order.paymentMethod === "qr") {
-                const { qrImage, expiresAt } = await createDynamicQR(order, paymentIntent.client_secret);
-                order.qrCodeUrl = qrImage;
-                order.qrCodeExpiresAt = expiresAt;
+        // -----------------------------
+        // CASE 2: Bank Transfer (Stripe + token từ client)
+        // -----------------------------
+        if (order.paymentMethod === "bank_transfer") {
+            if (!token) {
+                return res.status(400).json({ message: "Missing payment token from client" });
             }
 
-            // Lưu PaymentIntent ID vào database
+            const amount = Math.round(order.totalPrice * 100); // USD cents
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount,
+                currency: "usd",
+                payment_method_data: {
+                    type: "card",
+                    card: { token }, // token FE gửi lên từ publishable key
+                },
+                confirm: true, // confirm ngay khi tạo
+                metadata: {
+                    orderId: order._id.toString(),
+                    method: "bank_transfer",
+                },
+            });
+
+            order.stripePaymentIntentId = paymentIntent.id;
             await order.save();
-            console.log(`Successfully saved PaymentIntent ID to order: ${order.stripePaymentIntentId}`);
-        } else {
-            console.log(`Retrieving existing PaymentIntent with ID: ${order.stripePaymentIntentId} for order ID: ${orderId}`);
-            paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+
+            return res.json({
+                message: "Bank transfer initiated via Stripe",
+                paymentMethod: order.paymentMethod,
+                clientSecret: paymentIntent.client_secret,
+                status: paymentIntent.status,
+            });
         }
 
-        return res.json({
-            message: "Payment created via Stripe",
-            paymentMethod: order.paymentMethod,
-            paymentStatus: order.paymentStatus,
-            clientSecret: paymentIntent.client_secret,
-            amount: paymentIntent.amount,
-            currency: paymentIntent.currency,
-            qrCodeUrl: order.qrCodeUrl || null,
-            qrCodeExpiresAt: order.qrCodeExpiresAt || null,
-        });
+        // -----------------------------
+        // CASE 3: QR Payment
+        // -----------------------------
+        if (order.paymentMethod === "qr") {
+            let paymentIntent;
+
+            if (!order.stripePaymentIntentId) {
+                const amount = Math.round(order.totalPrice * 100);
+
+                paymentIntent = await stripe.paymentIntents.create({
+                    amount,
+                    currency: "usd",
+                    metadata: {
+                        orderId: order._id.toString(),
+                        method: "qr",
+                    },
+                });
+
+                order.stripePaymentIntentId = paymentIntent.id;
+
+                // Tạo QR chứa client_secret + order info
+                const { qrImage, expiresAt } = await createDynamicQR(
+                    order,
+                    paymentIntent.client_secret
+                );
+
+                order.qrCodeUrl = qrImage;
+                order.qrCodeExpiresAt = expiresAt;
+
+                await order.save();
+            } else {
+                paymentIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+            }
+
+            return res.json({
+                message: "QR payment created via Stripe",
+                paymentMethod: order.paymentMethod,
+                clientSecret: paymentIntent.client_secret,
+                qrCodeUrl: order.qrCodeUrl,
+                qrCodeExpiresAt: order.qrCodeExpiresAt,
+                status: paymentIntent.status,
+            });
+        }
+
+        return res.status(400).json({ message: "Unsupported payment method" });
 
     } catch (error) {
         console.error("Error in createPayment:", error);

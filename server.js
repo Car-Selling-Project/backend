@@ -49,7 +49,6 @@ const corsOptions = {
       callback(new Error("❌ Not allowed by CORS"));
     }
   },
-  credentials: true,
   methods: ["GET", "POST" , "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -66,7 +65,7 @@ app.use(
     },
   })
 );
-app.use(cors());
+app.use(cors(corsOptions));
 
 // ✅ Middleware cơ bản
 app.use(express.json());

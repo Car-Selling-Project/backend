@@ -23,27 +23,47 @@ export const createOrder = async (req, res) => {
   try {
     const adminId = req.admin?._id;
 
-    const { carInfo: carId, quantity, paymentMethod, bankDetails, qrCodeUrl, deposit: reqDeposit, ...rest } = req.body;
+    const {
+      carInfo: carId,
+      quantity = 1,
+      paymentMethod,
+      bankDetails,
+      qrCodeUrl,
+      deposit: reqDeposit,
+      ...rest
+    } = req.body;
 
     const car = await Car.findById(carId);
     if (!car) return res.status(404).json({ message: "❌ Car not found" });
 
     const registrationFee = 500;
     const insuranceFee = 300;
-    const tax = 0.1; // 10%
+    const taxRate = 0.1; // 10%
 
-    const fullPrice = Math.round(car.price * quantity + car.price * tax + registrationFee + insuranceFee);
+    // ✅ Nhân tax với tổng giá trị car * quantity
+    const carSubtotal = car.price * quantity;
+    const tax = carSubtotal * taxRate;
 
+    const fullPrice = Math.round(carSubtotal + tax + registrationFee + insuranceFee);
+
+    // ✅ Kiểm tra deposit
     let depositAmount = 0;
     if (paymentMethod === "deposit") {
-      if (!reqDeposit) return res.status(400).json({ message: "❌ Deposit amount is required" });
-      if (reqDeposit < 0.3 * fullPrice || reqDeposit > fullPrice)
-        return res.status(400).json({ message: `❌ Deposit must be between 30% and 100% of totalPrice (${Math.round(0.3 * fullPrice)} - ${fullPrice})` });
+      if (!reqDeposit)
+        return res.status(400).json({ message: "❌ Deposit amount is required" });
+
+      const minDeposit = Math.round(0.3 * fullPrice);
+      if (reqDeposit < minDeposit || reqDeposit > fullPrice) {
+        return res.status(400).json({
+          message: `❌ Deposit must be between 30% and 100% of totalPrice (${minDeposit} - ${fullPrice})`,
+        });
+      }
       depositAmount = reqDeposit;
     } else {
-      depositAmount = fullPrice; // full cash
+      depositAmount = fullPrice; // full payment
     }
 
+    // ✅ Khởi tạo payload
     const payload = {
       ...rest,
       admin: adminId,
@@ -56,17 +76,27 @@ export const createOrder = async (req, res) => {
       qrCodeUrl: "",
     };
 
+    // ✅ Kiểm tra thêm theo phương thức thanh toán
     if (paymentMethod === "bank_transfer") {
-      if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber)
-        return res.status(400).json({ message: "❌ Bank name and account number required for bank transfer" });
-      payload.bankDetails = bankDetails;
+      if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber) {
+        return res.status(400).json({
+          message: "❌ Bank name and account number are required for bank transfer",
+        });
+      }
+      payload.bankDetails = {
+        bankName: bankDetails.bankName,
+        bankAccountNumber: bankDetails.bankAccountNumber,
+      };
     }
 
     if (paymentMethod === "qr") {
-      if (!qrCodeUrl) return res.status(400).json({ message: "❌ qrCodeUrl is required for QR payment" });
+      if (!qrCodeUrl) {
+        return res.status(400).json({ message: "❌ qrCodeUrl is required for QR payment" });
+      }
       payload.qrCodeUrl = qrCodeUrl;
     }
 
+    // ✅ Tạo order
     const newOrder = await Order.create(payload);
     const populatedOrder = await populateOrder(Order.findById(newOrder._id));
 
@@ -75,7 +105,9 @@ export const createOrder = async (req, res) => {
       ...orderResponse(populatedOrder),
     });
   } catch (error) {
-    return res.status(500).json({ message: "❌ Failed to create order", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "❌ Failed to create order", error: error.message });
   }
 };
 
@@ -275,45 +307,35 @@ export const calculateTotalPrice = (car, quantity, tax, registrationFee, insuran
 export const updatePaymentMethodForCustomer = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { paymentMethod, bankDetails, qrCodeUrl } = req.body;
+    const { paymentMethod } = req.body;
 
     const validMethods = ["cash", "bank_transfer", "qr"];
     if (!validMethods.includes(paymentMethod)) {
       return res.status(400).json({ message: "Invalid payment method" });
     }
 
+    // Tìm order
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Xử lý logic riêng cho từng phương thức
-    if (paymentMethod === "bank_transfer") {
-      if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber) {
-        return res.status(400).json({
-          message: "Bank name and account number are required for bank_transfer"
-        });
-      }
-      order.bankDetails = bankDetails;
-      order.qrCodeUrl = undefined; // clear QR nếu trước đó có
-    } else if (paymentMethod === "qr") {
-      if (!qrCodeUrl) {
-        return res.status(400).json({
-          message: "QR code URL is required for qr payment method"
-        });
-      }
-      order.qrCodeUrl = qrCodeUrl;
-      order.bankDetails = undefined; // clear bank details nếu trước đó có
-    } else {
-      // cash
-      order.bankDetails = undefined;
-      order.qrCodeUrl = undefined;
+    // Lấy config cứng từ code
+    const config = paymentConfigs[paymentMethod];
+    if (!config) {
+      return res.status(400).json({ message: "Payment method not available" });
     }
 
+    // Gắn thông tin vào order
     order.paymentMethod = paymentMethod;
+    order.paymentDetail = config;
+
     await order.save();
 
-    res.json({ message: "Payment method updated successfully", order });
+    res.json({
+      message: "Payment method updated successfully",
+      order
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -376,3 +398,19 @@ export const getAllOrderStatusConfirm = async (req, res) => {
     res.status(500).json({ message: "❌ Failed to fetch confirmed statuses", error: error.message });
   }
 };
+
+
+
+const paymentConfigs = {
+  cash: {},
+  bank_transfer: {
+    bankDetail: {
+      bankName: "TPBank",
+      accountNumber: "07200060908",
+    }
+  },
+  qr: {
+    qrUrl: "https://example.com/qrcode.png"
+  }
+};
+
