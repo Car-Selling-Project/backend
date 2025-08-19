@@ -10,7 +10,7 @@ PaymentRouter.post("/payment", authCustomer, createPayment);
 PaymentRouter.patch("/payment/cancel", authCustomer, cancelPayment);
 
 // ---------------- Admin routes ----------------
-PaymentRouter.patch("/payment/confirm", authAdmin, confirmPayment);
+PaymentRouter.patch("/payment/:id/confirm", authAdmin, confirmPayment);
 PaymentRouter.patch("/payment/cancel", authAdmin, cancelPayment);
 
 export default PaymentRouter;

@@ -40,6 +40,9 @@ export const loginAdmin = async (req, res) => {
       message: "Login successfully",
       accessToken,
       refreshToken,
+      admin: {
+        name: admin.name
+      }
     });
   } catch (err) {
     console.error("❌ Login Admin error:", err);

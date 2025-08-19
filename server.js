@@ -26,6 +26,7 @@ import LocationRouter from "./routes/Locations.route.js";
 import BrandRouter from "./routes/Brands.routes.js";
 import TestDriveRouter from "./routes/TestDrive.routes.js";
 import  PaymentRouter from "./routes/Payment.routes.js";
+import ReviewsRouter from "./routes/Reviews.routes.js";
 // ✅ Load biến môi trường từ .env
 dotenv.config();
 
@@ -88,6 +89,7 @@ app.use("/customers", CustomerContractRouter);
 app.use("/customers", TestDriveRouter);
 app.use("/customers", OrderRouter);
 app.use("/customers", PaymentRouter);
+app.use("/customers", ReviewsRouter);
 
 
 // Admins

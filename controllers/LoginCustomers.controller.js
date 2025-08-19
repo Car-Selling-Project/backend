@@ -58,6 +58,9 @@ export const loginCustomer = async (req, res) => {
       },
       accessToken,
       refreshToken,
+      customer:{
+        name: customer.name
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
