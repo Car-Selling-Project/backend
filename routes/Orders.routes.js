@@ -16,7 +16,6 @@ import {
     updatePaymentMethodForCustomer,
     updateDepositForCustomer,
     createCustomerOrder,
-    getAllAdmins
 } from "../controllers/Orders.controller.js";
 import {authCustomer} from "../middlewares/AuthCustomers.middlewares.js";
 const OrderRouter = express.Router();
@@ -35,6 +34,4 @@ OrderRouter.get("/orders", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orders/:id", authCustomer, getOrderByIdForCustomer);
 OrderRouter.patch("/orders/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
 OrderRouter.patch("/orders/:id/deposit", authCustomer, updateDepositForCustomer);
-OrderRouter.get("/orders/alladmins" , getAllAdmins);
-
 export default OrderRouter;
