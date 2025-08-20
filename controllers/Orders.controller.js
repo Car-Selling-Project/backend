@@ -1,5 +1,6 @@
 import Order from "../models/orders.schema.js";
 import Car from "../models/cars.schema.js";
+import Admin from "../models/admins.schema.js";
 
 // Helper populate
 const populateOrder = (query) =>
@@ -507,5 +508,21 @@ export const createCustomerOrder = async (req, res) => {
     return res
       .status(500)
       .json({ message: "❌ Failed to create order", error: error.message });
+  }
+};
+export const getAllAdmins = async (req, res) => {
+  try {
+    const admins = await Admin.find({}, "name"); // chỉ lấy field name
+
+    res.status(200).json({
+      message: "✅ Admins fetched successfully",
+      data: admins,
+    });
+  } catch (error) {
+    console.error("❌ Error getAllAdmins:", error);
+    res.status(500).json({
+      message: "❌ Failed to fetch admins",
+      error: error.message,
+    });
   }
 };
