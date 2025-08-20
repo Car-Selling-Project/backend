@@ -1,5 +1,5 @@
 import express from "express";
-import { createCar ,deleteCarByid,getAllCars,getCarById,updateCarById } from "../controllers/Cars.controller.js";
+import { createCar ,deleteCarById,getAllCars,getCarById,updateCarById } from "../controllers/Cars.controller.js";
 import { authAdmin } from "../middlewares/AuthAdmins.middlewares.js";
 import {createCarLimiter} from "../middlewares/CreateCarlimiter.middlewares.js";
 import {validateRequest} from "../middlewares/validateRequest.middlewares.js";
@@ -20,5 +20,5 @@ CRUDCarsRouter.post(
 CRUDCarsRouter.get("/cars", getAllCars );
 CRUDCarsRouter.patch("/cars/:id", authAdmin, upload.array("images", 10) , handleImageUpload, validateRequest(updateCarSchema) , updateCarById);
 CRUDCarsRouter.get("/cars/:id" , getCarById);
-CRUDCarsRouter.delete("/cars/:id", deleteCarByid)
+CRUDCarsRouter.delete("/cars/:id", deleteCarById)
 export default CRUDCarsRouter;

@@ -7,7 +7,6 @@ const populateOrder = (query) =>
     .populate("admin", "name email")
     .populate("carInfo", "title price stock")
     .populate("location", "name")
-    .populate("customerId", "name email phone");
 
 // Helper response
 const orderResponse = (order) => ({
@@ -415,8 +414,12 @@ const paymentConfigs = {
 };
 
 export const createCustomerOrder = async (req, res) => {
+   console.log("🔥 Hit createCustomerOrder with body:", req.body);
   try {
-    const customerId = req.customer?._id; // dùng customerId từ req
+    const customerId = req.customer?._id; // lấy từ token
+    if (!customerId) {
+      return res.status(401).json({ message: "❌ Unauthorized: customer not found in token" });
+    }
 
     const {
       carInfo: carId,
@@ -428,17 +431,20 @@ export const createCustomerOrder = async (req, res) => {
       ...rest
     } = req.body;
 
+    // 1. Check car tồn tại
     const car = await Car.findById(carId);
     if (!car) return res.status(404).json({ message: "❌ Car not found" });
 
+    // 2. Tính phí
     const registrationFee = 500;
     const insuranceFee = 300;
-    const taxRate = 0.1; // 10%
+    const taxRate = 0.1;
 
     const carSubtotal = car.price * quantity;
     const tax = carSubtotal * taxRate;
     const fullPrice = Math.round(carSubtotal + tax + registrationFee + insuranceFee);
 
+    // 3. Xử lý deposit
     let depositAmount = 0;
     if (paymentMethod === "deposit") {
       if (!reqDeposit)
@@ -455,9 +461,10 @@ export const createCustomerOrder = async (req, res) => {
       depositAmount = fullPrice;
     }
 
+    // 4. Chuẩn bị payload để lưu
     const payload = {
-      ...rest,
-      customer: customerId,
+      ...rest,                 // chứa customerInfo, location...
+      customerId: customerId,    // gắn customer từ token
       carInfo: carId,
       quantity,
       totalPrice: fullPrice,
@@ -467,6 +474,7 @@ export const createCustomerOrder = async (req, res) => {
       qrCodeUrl: "",
     };
 
+    // 5. Validate theo paymentMethod
     if (paymentMethod === "bank_transfer") {
       if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber) {
         return res.status(400).json({
@@ -486,6 +494,7 @@ export const createCustomerOrder = async (req, res) => {
       payload.qrCodeUrl = qrCodeUrl;
     }
 
+    // 6. Tạo order
     const newOrder = await Order.create(payload);
     const populatedOrder = await populateOrder(Order.findById(newOrder._id));
 
@@ -494,6 +503,7 @@ export const createCustomerOrder = async (req, res) => {
       ...orderResponse(populatedOrder),
     });
   } catch (error) {
+    console.error("❌ Error in createCustomerOrder:", error);
     return res
       .status(500)
       .json({ message: "❌ Failed to create order", error: error.message });
