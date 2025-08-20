@@ -526,3 +526,14 @@ export const getAllAdmins = async (req, res) => {
     });
   }
 };
+export const getAllOrdersForCustomer = async (req, res) => {
+  try {
+    const customerId = req.customer?._id;
+    if (!customerId) return res.status(401).json({ message: "Unauthorized" });
+
+    const orders = await Order.find({ customerId }); // tất cả order của customer
+    return res.status(200).json({ message: "✅ Orders fetched successfully", data: orders });
+  } catch (error) {
+    return res.status(500).json({ message: "❌ Failed to get orders", error: error.message });
+  }
+};
