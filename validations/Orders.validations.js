@@ -82,15 +82,6 @@ const orderValidationSchema = Joi.object({
     otherwise: Joi.forbidden()
   }),
 
-  customerId: Joi.string()
-    .hex()
-    .required()
-    .custom(noWhitespace('Customer ID'))
-    .messages({
-      'string.empty': 'Customer ID is required',
-      'string.hex': 'Customer ID must be a valid hex string'
-    }),
-
   customerInfo: Joi.object({
     fullName: Joi.string()
       .required()
