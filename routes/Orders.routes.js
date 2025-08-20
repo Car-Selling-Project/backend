@@ -35,5 +35,5 @@ OrderRouter.get("/orders", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orders/:id", authCustomer, getOrderByIdForCustomer);
 OrderRouter.patch("/orders/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
 OrderRouter.patch("/orders/:id/deposit", authCustomer, updateDepositForCustomer);
-OrderRouter.get("/orders" , authCustomer, getAllOrdersForCustomer);
+OrderRouter.get("/orderss/allorderforcustomer" , authCustomer, getAllOrdersForCustomer);
 export default OrderRouter;
