@@ -1,147 +1,133 @@
-import dotenv from "dotenv";
-import Stripe from "stripe";
 import Order from "../models/orders.schema.js";
 import QRCode from "qrcode";
 
-dotenv.config();
+// Fake card info (dùng để test)
+export const FAKE_CARD = {
+  number: "4242 4242 4242 4242",
+  exp_month: "12",
+  exp_year: "34",
+  cvc: "123",
+};
 
-// Lấy key từ env
-const stripeKey = process.env.STRIPE_SECRET_KEY;
+// Fake PaymentIntent generator
+const generateFakePaymentIntent = (orderId, amount) => {
+  return {
+    id: `pi_fake_${Date.now()}`,
+    client_secret: `cs_fake_${Date.now()}`,
+    amount,
+    metadata: { orderId },
+    status: "requires_payment_method",
+  };
+};
 
-// Nếu không có key thì throw lỗi rõ ràng
-if (!stripeKey) {
-  throw new Error("❌ Missing STRIPE_SECRET_KEY in environment variables");
-}
-
-// Tạo Stripe instance
-const stripe = new Stripe(stripeKey, {
-  apiVersion: "2024-06-20",
-});
-
+// Tạo QR code động
 const createDynamicQR = async (order, clientSecret) => {
   const expiryTime = new Date(Date.now() + 20 * 60 * 1000);
   const qrData = JSON.stringify({
     orderId: order._id,
-    amount: order.totalPrice, // ✅ đổi totalAmount -> totalPrice
+    amount: order.totalPrice,
     clientSecret,
     expiry: expiryTime,
   });
-
   const qrCode = await QRCode.toDataURL(qrData);
   return { qrCode, expiryTime };
 };
 
-
+// Tạo payment (fake)
 export const createPayment = async (req, res) => {
   try {
     const { orderId, paymentMethod } = req.body;
-
     const validMethods = ["cash", "bank_transfer", "qr"];
-    if (!validMethods.includes(paymentMethod)) {
+    if (!validMethods.includes(paymentMethod))
       return res.status(400).json({ message: "Invalid payment method" });
-    }
 
     const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    const amount = Number(order.totalPrice);
-    if (!amount || isNaN(amount)) {
-      return res.status(400).json({ message: "Invalid order totalPrice" });
-    }
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
     let clientSecret = null;
     let qrData = null;
 
-    if (paymentMethod === "bank_transfer" || paymentMethod === "qr") {
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount * 100), // ✅ cents
-        currency: "usd",
-        metadata: { orderId: order._id.toString() },
-      });
-
+    if (["bank_transfer", "qr"].includes(paymentMethod)) {
+      // Fake PaymentIntent
+      const paymentIntent = generateFakePaymentIntent(order._id.toString(), Math.round(order.totalPrice * 100));
       clientSecret = paymentIntent.client_secret;
-      order.stripePaymentIntentId = paymentIntent.id; // ✅ lưu lại để cancel sau
+      order.stripePaymentIntentId = paymentIntent.id;
 
       if (paymentMethod === "qr") {
         qrData = await createDynamicQR(order, clientSecret);
+        order.qrCodeUrl = qrData.qrCode;
       }
+
+      order.paymentStatus = "pending";
+    } else if (paymentMethod === "cash") {
+      order.paymentStatus = "confirmed";
     }
 
     order.paymentMethod = paymentMethod;
     await order.save();
 
     return res.json({
-      message: "✅ Payment created",
+      message: "Payment created (FAKE)",
       paymentMethod,
       clientSecret,
       qrData,
+      status: order.paymentStatus,
+      fakeCard: FAKE_CARD, // gửi thông tin fake card luôn
     });
   } catch (error) {
-    console.error("❌ Error creating payment:", error);
+    console.error("❌ Error createPayment:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-
-// controllers/payment.controller.js
+// Confirm payment offline
 export const confirmPayment = async (req, res) => {
   try {
-    const { clientSecret, paymentMethod } = req.body;
-    if (!clientSecret) {
-      return res.status(400).json({ message: "clientSecret is required" });
-    }
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ message: "orderId is required" });
 
-    const paymentIntentId = clientSecret.split("_secret")[0];
-    if (paymentMethod) {
-      await stripe.paymentIntents.update(paymentIntentId, { payment_method: paymentMethod });
-    }
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const paymentIntent = await stripe.paymentIntents.confirm(paymentIntentId);
-
-    if (paymentIntent.status === "succeeded") {
-      return res.status(200).json({
-        message: "Payment successful",
-        status: paymentIntent.status,
+    if (["bank_transfer", "qr"].includes(order.paymentMethod)) {
+      order.paymentStatus = "confirmed";
+      await order.save();
+      return res.json({
+        message: `Payment confirmed for ${order.paymentMethod} (FAKE)`,
+        status: order.paymentStatus,
       });
     }
 
-    return res.status(400).json({
-      message: "Payment not completed",
-      status: paymentIntent.status,
-    });
+    if (order.paymentMethod === "cash") {
+      return res.json({
+        message: "Cash payment already confirmed",
+        status: order.paymentStatus,
+      });
+    }
+
+    return res.status(400).json({ message: "Cannot confirm unknown payment method" });
   } catch (error) {
+    console.error("❌ Error confirmPayment:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-
-
-// CANCEL payment
+// Cancel payment
 export const cancelPayment = async (req, res) => {
   try {
     const { orderId } = req.body;
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.paymentStatus !== "pending") {
-      return res.status(400).json({ message: `Order is not pending` });
-    }
+    if (order.paymentStatus !== "pending")
+      return res.status(400).json({ message: "Order is not pending" });
 
-    if (order.stripePaymentIntentId) {
-      await stripe.paymentIntents.cancel(order.stripePaymentIntentId);
-    }
-
-    order.paymentStatus = "canceled"; // ✅ schema dùng "canceled" chứ không phải "cancelled"
+    order.paymentStatus = "canceled";
     await order.save();
 
-    return res.json({
-      message: "Payment cancelled successfully",
-      paymentStatus: order.paymentStatus,
-    });
+    return res.json({ message: "Payment cancelled (FAKE)", status: order.paymentStatus });
   } catch (error) {
-    console.error("❌ Error in cancelPayment:", error);
-    res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error("❌ Error cancelPayment:", error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
