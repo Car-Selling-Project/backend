@@ -414,3 +414,88 @@ const paymentConfigs = {
   }
 };
 
+export const createCustomerOrder = async (req, res) => {
+  try {
+    const customerId = req.customer?._id; // dùng customerId từ req
+
+    const {
+      carInfo: carId,
+      quantity = 1,
+      paymentMethod,
+      bankDetails,
+      qrCodeUrl,
+      deposit: reqDeposit,
+      ...rest
+    } = req.body;
+
+    const car = await Car.findById(carId);
+    if (!car) return res.status(404).json({ message: "❌ Car not found" });
+
+    const registrationFee = 500;
+    const insuranceFee = 300;
+    const taxRate = 0.1; // 10%
+
+    const carSubtotal = car.price * quantity;
+    const tax = carSubtotal * taxRate;
+    const fullPrice = Math.round(carSubtotal + tax + registrationFee + insuranceFee);
+
+    let depositAmount = 0;
+    if (paymentMethod === "deposit") {
+      if (!reqDeposit)
+        return res.status(400).json({ message: "❌ Deposit amount is required" });
+
+      const minDeposit = Math.round(0.3 * fullPrice);
+      if (reqDeposit < minDeposit || reqDeposit > fullPrice) {
+        return res.status(400).json({
+          message: `❌ Deposit must be between 30% and 100% of totalPrice (${minDeposit} - ${fullPrice})`,
+        });
+      }
+      depositAmount = reqDeposit;
+    } else {
+      depositAmount = fullPrice;
+    }
+
+    const payload = {
+      ...rest,
+      customer: customerId,
+      carInfo: carId,
+      quantity,
+      totalPrice: fullPrice,
+      deposit: depositAmount,
+      paymentMethod,
+      bankDetails: {},
+      qrCodeUrl: "",
+    };
+
+    if (paymentMethod === "bank_transfer") {
+      if (!bankDetails?.bankName || !bankDetails?.bankAccountNumber) {
+        return res.status(400).json({
+          message: "❌ Bank name and account number are required for bank transfer",
+        });
+      }
+      payload.bankDetails = {
+        bankName: bankDetails.bankName,
+        bankAccountNumber: bankDetails.bankAccountNumber,
+      };
+    }
+
+    if (paymentMethod === "qr") {
+      if (!qrCodeUrl) {
+        return res.status(400).json({ message: "❌ qrCodeUrl is required for QR payment" });
+      }
+      payload.qrCodeUrl = qrCodeUrl;
+    }
+
+    const newOrder = await Order.create(payload);
+    const populatedOrder = await populateOrder(Order.findById(newOrder._id));
+
+    return res.status(201).json({
+      message: "✅ Order created successfully",
+      ...orderResponse(populatedOrder),
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "❌ Failed to create order", error: error.message });
+  }
+};
