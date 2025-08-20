@@ -4,5 +4,5 @@ import { getAllAdmins } from "../controllers/Orders.controller.js";
 const AdminsRouter = express.Router();
 
 // GET /admins
-AdminsRouter.get("/", getAllAdmins);
+AdminsRouter.get("/admins", getAllAdmins);
 export default AdminsRouter;
