@@ -33,6 +33,10 @@ const testdriveSchema = new mongoose.Schema({
         enum:["pending", "approved", "declined"],
         default: "pending"
     },
+    admin:{
+         type:mongoose.Schema.Types.ObjectId,
+        ref: "Admin",
+    }
 },
 {
     timestamps:true

@@ -13,5 +13,5 @@ TestDriveRouter.delete("/testdrives/:id", authAdmin, deleteTestDrive);
 TestDriveRouter.get("/testdrives/approved", authCustomer, getApprovedTestDrivesByCustomer);
 TestDriveRouter.get("/testdrives", authCustomer, getAllTestDrivesByCustomer);
 TestDriveRouter.get("/testdrives/:id", authCustomer, getTestDriveByIdForCustomer);
-TestDriveRouter.get("/testdrives", authAdmin, getAllTestDrives);
+TestDriveRouter.get("/testdrivess", authAdmin, getAllTestDrives);
 export default TestDriveRouter;
