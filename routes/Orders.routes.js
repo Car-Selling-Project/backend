@@ -17,6 +17,7 @@ import {
     updateDepositForCustomer,
     createCustomerOrder,
     getAllOrdersForCustomer,
+    getOrdersForCustomer,
 } from "../controllers/Orders.controller.js";
 import {authCustomer} from "../middlewares/AuthCustomers.middlewares.js";
 const OrderRouter = express.Router();
@@ -31,7 +32,8 @@ OrderRouter.patch("/orders/:id/canceled", authAdmin, canceledOrder);
 // ---- CUSTOMER ----
 OrderRouter.post("/orderss/customers-create", authCustomer, createCustomerOrder);
 OrderRouter.get("/orderss/confirm", authCustomer, getAllOrderStatusConfirm);
-OrderRouter.get("/orderss", authCustomer, getAllOrderStatus);
+OrderRouter.get("/orderss", authCustomer, getOrdersForCustomer);
+OrderRouter.get("/orderss-status", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orderss/:id", authCustomer, getOrderByIdForCustomer);
 OrderRouter.patch("/orderss/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
 OrderRouter.patch("/orderss/:id/deposit", authCustomer, updateDepositForCustomer);
