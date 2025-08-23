@@ -4,6 +4,6 @@ import { authCustomer } from "../middlewares/AuthCustomers.middlewares.js";
 const ReviewsRouter = express.Router();
 ReviewsRouter.post("/reviews" ,authCustomer , createReview);
 ReviewsRouter.get("/reviews", getAllReviews);
-ReviewsRouter.patch("/reviews/:reviewId", authCustomer, updateReview);
-ReviewsRouter.delete("/reviews/:reviewId", authCustomer, deleteReview);
+ReviewsRouter.patch("/reviewss/:reviewId", authCustomer, updateReview);
+ReviewsRouter.delete("/reviewss/:reviewId", authCustomer, deleteReview);
 export default ReviewsRouter;

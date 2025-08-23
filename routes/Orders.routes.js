@@ -30,10 +30,10 @@ OrderRouter.patch("/orders/:id/canceled", authAdmin, canceledOrder);
 
 // ---- CUSTOMER ----
 OrderRouter.post("/orders/customers-create", authCustomer, createCustomerOrder);
-OrderRouter.get("/orders/confirm", authCustomer, getAllOrderStatusConfirm);
-OrderRouter.get("/orders", authCustomer, getAllOrderStatus);
-OrderRouter.get("/orders/:id", authCustomer, getOrderByIdForCustomer);
-OrderRouter.patch("/orders/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
-OrderRouter.patch("/orders/:id/deposit", authCustomer, updateDepositForCustomer);
-OrderRouter.get("/orderss/allorderforcustomer" , authCustomer, getAllOrdersForCustomer);
+OrderRouter.get("/orderss/confirm", authCustomer, getAllOrderStatusConfirm);
+OrderRouter.get("/orderss", authCustomer, getAllOrderStatus);
+OrderRouter.get("/orderss/:id", authCustomer, getOrderByIdForCustomer);
+OrderRouter.patch("/orderss/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
+OrderRouter.patch("/orderss/:id/deposit", authCustomer, updateDepositForCustomer);
+OrderRouter.get("/orderss/allorderforcustomer", authCustomer, getAllOrdersForCustomer);
 export default OrderRouter;
