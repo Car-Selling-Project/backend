@@ -6,7 +6,7 @@ import Admin from "../models/admins.schema.js";
 const populateOrder = (query) =>
   query
     .populate("admin", "name email")
-    .populate("carInfo", "title price stock")
+    .populate("carInfo")
     .populate("location", "name")
 
 // Helper response
