@@ -153,7 +153,15 @@ const orderValidationSchema = Joi.object({
 
   status: Joi.string()
     .valid('pending', 'confirmed', 'canceled')
-    .default('pending')
+    .default('pending'),
+  customerId: Joi.string()
+    .hex()
+    .required()
+    .custom(noWhitespace('Customer ID'))
+    .messages({
+      'string.empty': 'Customer ID is required',
+      'string.hex': 'Customer ID must be a valid hex string'
+    })
 });
 
 export default orderValidationSchema;
