@@ -29,7 +29,7 @@ OrderRouter.patch("/orders/:orderId/confirm", authAdmin, confirmOrder);
 OrderRouter.patch("/orders/:id/canceled", authAdmin, canceledOrder);
 
 // ---- CUSTOMER ----
-OrderRouter.post("/orders/customers-create", authCustomer, createCustomerOrder);
+OrderRouter.post("/orderss/customers-create", authCustomer, createCustomerOrder);
 OrderRouter.get("/orderss/confirm", authCustomer, getAllOrderStatusConfirm);
 OrderRouter.get("/orderss", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orderss/:id", authCustomer, getOrderByIdForCustomer);

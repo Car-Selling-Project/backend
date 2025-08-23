@@ -512,7 +512,7 @@ export const createCustomerOrder = async (req, res) => {
 };
 export const getAllAdmins = async (req, res) => {
   try {
-    const admins = await Admin.find({}, "name"); // chỉ lấy field name
+    const admins = await Admin.find({}, "name email"); // chỉ lấy field name
 
     res.status(200).json({
       message: "✅ Admins fetched successfully",
