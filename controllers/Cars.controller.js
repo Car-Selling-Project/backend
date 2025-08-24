@@ -204,54 +204,47 @@ export const updateCarById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Clone req.body và loại bỏ field `images` nếu có
+    // Clone req.body và loại bỏ field images
     const updateFields = { ...req.body };
     delete updateFields.images;
 
-    let combinedImages = [];
+    const car = await Car.findById(id);
+    if (!car) {
+      return res.status(404).json({ message: "🚫 Car not found" });
+    }
 
-    // Nếu có file ảnh mới thì xử lý upload
+    let combinedImages = [...car.images]; // bắt đầu với ảnh cũ
+
+    // Nếu có file ảnh mới, upload và gộp
     if (req.files && req.files.length > 0) {
       const newImageUrls = await Promise.all(
         req.files.map((file) => uploadToCloudinary(file, "cars"))
       );
-
-      const car = await Car.findById(id);
-      if (!car) {
-        return res.status(404).json({ message: "🚫 Car not found" });
-      }
-
-      // Gộp ảnh cũ và ảnh mới
-      combinedImages = [...car.images, ...newImageUrls];
-
-      // Check tổng ảnh phải từ 1 đến 9
-      if (combinedImages.length < 1 || combinedImages.length > 9) {
-        return res.status(400).json({
-          message: "🚫 Total images must be between 1 and 9",
-        });
-      }
-
-      updateFields.images = combinedImages;
+      combinedImages.push(...newImageUrls);
     }
+
+    // Check tổng ảnh phải từ 1 đến 9
+    if (combinedImages.length < 1 || combinedImages.length > 9) {
+      return res.status(400).json({
+        message: "🚫 Total images must be between 1 and 9",
+      });
+    }
+
+    updateFields.images = combinedImages;
 
     const updatedCar = await Car.findByIdAndUpdate(id, updateFields, {
       new: true,
       runValidators: true,
     });
 
-    if (!updatedCar) {
-      return res.status(404).json({ message: "🚫 Car not found" });
-    }
-
     const populatedCar = await Car.findById(id)
-  .populate("brandId", "name")
-  .populate("locationId", "name");
+      .populate("brandId", "name")
+      .populate("locationId", "name");
 
-res.status(200).json({
-  message: "✅ Car updated successfully",
-  car: populatedCar,
-});
-
+    res.status(200).json({
+      message: "✅ Car updated successfully",
+      car: populatedCar,
+    });
   } catch (error) {
     res.status(500).json({
       message: "🚫 Failed to update car",
@@ -259,6 +252,7 @@ res.status(200).json({
     });
   }
 };
+
 export const getCarById = async (req, res) => {
   try {
     const { id } = req.params;
