@@ -122,10 +122,6 @@ export const getAllCars = async (req, res) => {
       status,
       minPrice,
       maxPrice,
-      minRating,
-      maxRating,
-      minViewCount,
-      maxViewCount,
       "engine.power": enginePower,
       "engine.fuelconsumsion": fuelConsumsion,
       "dimension.length": dimensionLength,
@@ -156,14 +152,6 @@ export const getAllCars = async (req, res) => {
     if (minPrice || maxPrice) query.price = {};
     if (minPrice) query.price.$gte = Number(minPrice);
     if (maxPrice) query.price.$lte = Number(maxPrice);
-
-    if (minRating || maxRating) query.rating = {};
-    if (minRating) query.rating.$gte = Number(minRating);
-    if (maxRating) query.rating.$lte = Number(maxRating);
-
-    if (minViewCount || maxViewCount) query.viewCount = {};
-    if (minViewCount) query.viewCount.$gte = Number(minViewCount);
-    if (maxViewCount) query.viewCount.$lte = Number(maxViewCount);
 
     // Nested engine & dimension fields
     if (enginePower) query["engine.power"] = Number(enginePower);
