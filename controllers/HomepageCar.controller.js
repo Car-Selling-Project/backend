@@ -7,13 +7,12 @@ export const getPopularCars = async (req, res) => {
     const reviews = await Review.aggregate([
       { $match: { rating: 5 } },
       { $group: { _id: "$carId", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 4 }
+      { $sort: { count: -1 } }
     ]);
 
     const carIds = reviews.map(r => r._id);
 
-    const cars = await Car.find({ 
+    let cars = await Car.find({ 
         _id: { $in: carIds },
         status: 'active'
       })
@@ -21,6 +20,9 @@ export const getPopularCars = async (req, res) => {
         { path: 'brandId', select: 'name' },
         { path: 'locationId', select: 'name' }
       ]);
+
+    // chỉ lấy đúng 4 xe
+    cars = cars.slice(0, 4);
 
     res.status(200).json({ cars });
   } catch (err) {
@@ -31,16 +33,15 @@ export const getPopularCars = async (req, res) => {
 
 export const getRecommendedCars = async (req, res) => {
   try {
-    // Lấy carId có rating từ 4 đến 5, random 8 cái
     const reviews = await Review.aggregate([
       { $match: { rating: { $gte: 4, $lte: 5 } } },
       { $group: { _id: "$carId" } },
-      { $sample: { size: 8 } }
+      { $sample: { size: 20 } } // lấy nhiều hơn 8 để còn lọc active
     ]);
 
     const carIds = reviews.map(r => r._id);
 
-    const cars = await Car.find({
+    let cars = await Car.find({
       _id: { $in: carIds },
       status: 'active'
     })
@@ -48,6 +49,9 @@ export const getRecommendedCars = async (req, res) => {
         { path: 'brandId', select: 'name' },
         { path: 'locationId', select: 'name' }
       ]);
+
+    // chỉ lấy đúng 8 xe
+    cars = cars.slice(0, 8);
 
     res.status(200).json({ cars });
   } catch (err) {
