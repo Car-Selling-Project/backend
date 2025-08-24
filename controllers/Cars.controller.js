@@ -91,8 +91,6 @@ export const createCar = async (req, res) => {
       engine,
       images: imageUrls,
       stock,
-      rating,
-      viewCount,
       status,
       createBy: adminId
     });
