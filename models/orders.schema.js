@@ -40,7 +40,7 @@ const orderSchema = new mongoose.Schema({
   qrCodeUrl: { type: String }, // chỉ dùng nếu paymentMethod === "qr"
   paymentStatus: {
     type: String,
-    enum: ["pending", "paid", "failed" , "deposit"],
+    enum: ["pending", "paid", "failed" , "deposited"],
     default: "pending"
   },
   totalPrice: {
