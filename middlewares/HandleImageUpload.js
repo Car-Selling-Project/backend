@@ -1,9 +1,16 @@
 import { v2 as cloudinary } from "cloudinary";
 import streamifier from "streamifier";
 
-export const handleImageUpload = async (req, res, next) => {
+export const handleImageUpload = (isCreate = false) => async (req, res, next) => {
+  // Nếu không có file
   if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ message: "🚫 No images uploaded" });
+    if (isCreate) {
+      // Bắt buộc khi tạo mới
+      return res.status(400).json({ message: "🚫 Please upload at least 1 image" });
+    } else {
+      // Update thì bỏ qua, giữ ảnh cũ
+      return next();
+    }
   }
 
   try {
@@ -22,7 +29,7 @@ export const handleImageUpload = async (req, res, next) => {
       })
     );
 
-    req.body.images = urls;
+    req.body.images = urls; // gán ảnh mới vào req.body
     next();
   } catch (err) {
     console.error("❌ Cloudinary upload error:", err);

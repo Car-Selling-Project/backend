@@ -204,7 +204,6 @@ export const updateCarById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Clone req.body và loại bỏ field images
     const updateFields = { ...req.body };
     delete updateFields.images;
 
@@ -213,9 +212,9 @@ export const updateCarById = async (req, res) => {
       return res.status(404).json({ message: "🚫 Car not found" });
     }
 
-    let combinedImages = [...car.images]; // bắt đầu với ảnh cũ
+    let combinedImages = [...car.images]; // giữ ảnh cũ
 
-    // Nếu có file ảnh mới, upload và gộp
+    // Nếu có file mới, upload và gộp
     if (req.files && req.files.length > 0) {
       const newImageUrls = await Promise.all(
         req.files.map((file) => uploadToCloudinary(file, "cars"))
@@ -223,14 +222,17 @@ export const updateCarById = async (req, res) => {
       combinedImages.push(...newImageUrls);
     }
 
-    // Check tổng ảnh phải từ 1 đến 9
-    if (combinedImages.length < 1 || combinedImages.length > 9) {
+    // Chỉ check tối đa 9 ảnh thôi
+    if (combinedImages.length > 9) {
       return res.status(400).json({
-        message: "🚫 Total images must be between 1 and 9",
+        message: "🚫 Total images must not exceed 9",
       });
     }
 
-    updateFields.images = combinedImages;
+    // Nếu có ảnh (cũ hoặc mới), mới gán vào updateFields
+    if (combinedImages.length > 0) {
+      updateFields.images = combinedImages;
+    }
 
     const updatedCar = await Car.findByIdAndUpdate(id, updateFields, {
       new: true,

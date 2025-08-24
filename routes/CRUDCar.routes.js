@@ -13,12 +13,12 @@ CRUDCarsRouter.post(
   authAdmin,
   createCarLimiter,
   upload.array("images", 10),
-  handleImageUpload, // xử lý và biến `req.body.images = [url1, url2, ...]`
+  handleImageUpload(true), // xử lý và biến `req.body.images = [url1, url2, ...]`
   validateRequest(createCarSchema),
   createCar
 );
 CRUDCarsRouter.get("/cars", getAllCars );
-CRUDCarsRouter.patch("/cars/:id", authAdmin, upload.array("images", 10) , handleImageUpload, validateRequest(updateCarSchema) , updateCarById);
+CRUDCarsRouter.patch("/cars/:id", authAdmin, upload.array("images", 10) , handleImageUpload(false), validateRequest(updateCarSchema) , updateCarById);
 CRUDCarsRouter.get("/cars/:id" , getCarById);
 CRUDCarsRouter.delete("/cars/:id", deleteCarById)
 export default CRUDCarsRouter;
