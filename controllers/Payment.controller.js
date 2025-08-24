@@ -155,3 +155,50 @@ export const cancelPayment = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+// ---------------- Admin ----------------
+export const getPaymentForAdmin = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId, "payment"); // lấy toàn bộ payment
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const payment = order.payment || {};
+    const paymentStatus = payment.status || null;
+
+    res.json({
+      payment,
+      paymentStatus,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+}
+
+// ---------------- Customer ----------------
+export const getPaymentForCustomer = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const customerId = req.customer._id;
+
+    if (!customerId) 
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const order = await Order.findOne(
+      { _id: orderId, customerId },
+      "payment"
+    );
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const payment = order.payment || {};
+    const paymentStatus = payment.status || null;
+
+    res.json({
+      payment,
+      paymentStatus,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+}

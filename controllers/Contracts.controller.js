@@ -142,17 +142,25 @@ export const signContractSeller = async (req, res) => {
 
 
 // ====== GET CONTRACT STATUS ======
-export const getContractStatus = async (req, res) => {
+export const getContractWithStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const order = await Order.findById(orderId, "contract");
+    const order = await Order.findById(orderId, "contract"); // lấy toàn bộ contract
+
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    res.json({ contractStatus: order.contract || {} });
+    const contract = order.contract || {};
+    const contractStatus = contract.status || null;
+
+    res.json({
+      contract,        // toàn bộ contract
+      contractStatus,  // chỉ status riêng
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
 }
+
 
 // Create Contract
 export const createContract = async (req, res) => {
@@ -409,16 +417,30 @@ export const signContractBuyer = async (req, res) => {
   }
 };
 
-export const getContractStatusForCustomer = async(req , res) =>{
-  try{
+export const getContractStatusForCustomer = async (req, res) => {
+  try {
     const { orderId } = req.params;
     const customerId = req.customer._id;
-    if(!customerId) return res.status(401).json({ message: "Unauthorized" });
+
+    if (!customerId) 
+      return res.status(401).json({ message: "Unauthorized" });
+
     const order = await Order.findOne(
-      {_id: orderId, customerId},
-      "contract"
+      { _id: orderId, customerId },
+      "contract" // chỉ lấy field contract
     );
-    if(!order) return res.status(404).json({ message: "Order not found" });
+
+    if (!order) 
+      return res.status(404).json({ message: "Order not found" });
+
+    const contract = order.contract || {};
+    const contractStatus = contract.status || null;
+
+    res.json({
+      contract,        // toàn bộ contract
+      contractStatus,  // chỉ status riêng
+    });
+
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
