@@ -29,6 +29,7 @@ import  PaymentRouter from "./routes/Payment.routes.js";
 import ReviewsRouter from "./routes/Reviews.routes.js";
 import AdminsRouter from "./routes/Admin.routes.js";
 import getAllCustomerRouter from "./routes/Customer.routes.js";
+import ProfileRouter from "./routes/ProfileCustomer.routes.js";
 // ✅ Load biến môi trường từ .env
 dotenv.config();
 
@@ -93,6 +94,7 @@ app.use("/customers", OrderRouter);
 app.use("/customers", PaymentRouter);
 app.use("/customers", ReviewsRouter);
 app.use("/customers" , AdminsRouter);
+app.use("/customers", ProfileRouter);
 
 
 // Admins
