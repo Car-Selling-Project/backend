@@ -523,3 +523,23 @@ export const getAllOrdersForCustomer = async (req, res) => {
     return res.status(500).json({ message: "❌ Failed to get orders", error: error.message });
   }
 };
+export const getAllOrderStatusForCustomer = async (req, res) => {
+  try {
+    const customerId = req.customer?._id; // ✅ lấy từ JWT payload
+
+    const orders = await Order.find(
+      { customerId }, // lọc theo customerId từ token
+      "status"        // chỉ lấy field status
+    );
+
+    res.json({
+      message: "✅ Order statuses fetched successfully",
+      statuses: orders.map(order => order.status),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "❌ Failed to fetch statuses",
+      error: error.message,
+    });
+  }
+};

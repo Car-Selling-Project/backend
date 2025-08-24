@@ -18,6 +18,7 @@ import {
     createCustomerOrder,
     getAllOrdersForCustomer,
     getOrdersForCustomer,
+    getAllOrderStatusForCustomer
 } from "../controllers/Orders.controller.js";
 import {authCustomer} from "../middlewares/AuthCustomers.middlewares.js";
 const OrderRouter = express.Router();
@@ -38,4 +39,6 @@ OrderRouter.get("/orderss/:id", authCustomer, getOrderByIdForCustomer);
 OrderRouter.patch("/orderss/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
 OrderRouter.patch("/orderss/:id/deposit", authCustomer, updateDepositForCustomer);
 OrderRouter.get("/orderss/allorderforcustomer", authCustomer, getAllOrdersForCustomer);
+OrderRouter.get("/orderss/status", authCustomer, getAllOrderStatusForCustomer);
+
 export default OrderRouter;
