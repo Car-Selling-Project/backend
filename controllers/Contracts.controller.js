@@ -3,6 +3,7 @@ import { uploadToCloudinary } from "../configs/cloudinary.config.js";
 import path from "path";
 import puppeteer from "puppeteer";
 import PdfPrinter from "pdfmake";
+import {computeContractStatus, computeOrderStatus} from "../helper.js"
 // ====== FONT CONFIG ======
 const fontRegular = path.join(process.cwd(), "fonts", "Roboto-VariableFont_wdth,wght.ttf");
 const fontItalic = path.join(process.cwd(), "fonts", "Roboto-Italic-VariableFont_wdth,wght.ttf");
@@ -16,41 +17,39 @@ const fonts = {
   },
 };
 
+// ================== SELLER ==================
 export const signContractSeller = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { signatureImage } = req.body;
 
-    // Lấy order + populate dữ liệu liên quan
+    // Lấy order
     const order = await Order.findById(orderId)
-      .populate({
-        path: "carInfo",
-        populate: { path: "brandId", select: "name" },
-      })
+      .populate({ path: "carInfo", populate: { path: "brandId", select: "name" } })
       .populate("admin", "name phone email")
       .populate("customerId");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
-
     if (!order.contract) order.contract = {};
 
-    // Cập nhật thông tin ký seller
+    // Cập nhật seller ký
     order.contract.signedBySeller = true;
     order.contract.signedBySellerName = order.admin?.name || "N/A";
     order.contract.signedBySellerAt = new Date();
     if (signatureImage) order.contract.signatureImageBySeller = signatureImage;
 
-    // Cập nhật trạng thái tổng thể
-    order.contract.signed = order.contract.signedBySeller && order.contract.signedByBuyer;
+    // Cập nhật trạng thái contract + order
+    computeContractStatus(order.contract);
+    computeOrderStatus(order);
 
     const buyer = order.customerId;
     const car = order.carInfo;
     const contractDate = new Date().toLocaleDateString();
 
-    // Hàm helper render chữ ký (text hoặc ảnh)
+    // Helper render chữ ký
     const renderSignature = (sig) => {
-      if (!sig) return `<div style='font-style:italic;color:#888;'>Chưa có chữ ký</div>`;
-      const isImage = typeof sig === 'string' && (sig.startsWith("data:image") || sig.startsWith("http"));
+      if (!sig) return `<div style='font-style:italic;color:#888;'>Not Signed</div>`;
+      const isImage = typeof sig === "string" && (sig.startsWith("data:image") || sig.startsWith("http"));
       return isImage
         ? `<img src='${sig}' alt='Signature' style='max-width:180px;max-height:60px;display:block;margin:0 auto;' />`
         : `<div style='font-family:monospace;font-size:1.1rem;color:#222;margin-top:4px;'>${sig}</div>`;
@@ -59,7 +58,7 @@ export const signContractSeller = async (req, res) => {
     const sellerSignHTML = renderSignature(order.contract.signatureImageBySeller);
     const buyerSignHTML = renderSignature(order.contract.signatureImageByBuyer);
 
-    // Giữ nguyên HTML gốc, chỉ thay chữ ký
+    // HTML hợp đồng
     const contractHTML = `<!DOCTYPE html><html><head><meta charset='utf-8'><style>
       body { font-family: Arial, sans-serif; font-size: 14px; background: #fff; color: #222; margin: 0; }
       .contract-container { max-width: 700px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px 36px 28px 36px; border: 1px solid #e3e3e3; }
@@ -113,19 +112,19 @@ export const signContractSeller = async (req, res) => {
       </div>
       </div></body></html>`;
 
-    // Render HTML thành PDF
+    // Render PDF
     let pdfBuffer;
     try {
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
-      await page.setContent(contractHTML, { waitUntil: 'networkidle0' });
-      pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+      await page.setContent(contractHTML, { waitUntil: "networkidle0" });
+      pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
       await browser.close();
     } catch (err) {
-      return res.status(500).json({ message: 'Failed to generate PDF', error: err });
+      return res.status(500).json({ message: "Failed to generate PDF", error: err });
     }
 
-    // Upload PDF lên Cloudinary
+    // Upload PDF
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
     order.contract.url = pdfUrl;
 
@@ -135,12 +134,12 @@ export const signContractSeller = async (req, res) => {
       message: "Seller signed contract successfully, contract updated",
       contract: order.contract,
     });
-
   } catch (error) {
     console.error("Error in signContractSeller:", error);
     res.status(500).json({ message: "Server error (seller)", error: error?.message, stack: error?.stack });
   }
 };
+
 
 // ====== GET CONTRACT STATUS ======
 export const getContractStatus = async (req, res) => {
@@ -288,53 +287,38 @@ export const signContractBuyer = async (req, res) => {
     const { orderId } = req.params;
     const { signatureImage } = req.body;
 
-    // Lấy order + populate dữ liệu liên quan
     const order = await Order.findById(orderId)
-      .populate({
-        path: "carInfo",
-        populate: { path: "brandId", select: "name" },
-      })
+      .populate({ path: "carInfo", populate: { path: "brandId", select: "name" } })
       .populate("admin", "name phone email")
       .populate("customerId");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order.admin) order.admin = { name: "N/A" };
 
-    // Nếu không có admin, gán tạm admin là object với name = 'N/A'
-    if (!order.admin) order.admin = { name: 'N/A' };
-
-    // Chỉ cho phép customer ký nếu đúng customerId
-    let orderCustomerId = order.customerId;
-    if (orderCustomerId && typeof orderCustomerId === 'object' && orderCustomerId._id) {
-      orderCustomerId = orderCustomerId._id;
-    }
+    // Check customer
+    let orderCustomerId = order.customerId?._id || order.customerId;
     if (!req.customer || String(req.customer._id) !== String(orderCustomerId)) {
-      return res.status(403).json({ 
-        message: "Forbidden: Only the order's customer can sign this contract",
-        debug: {
-          reqCustomerId: req.customer?._id,
-          orderCustomerId: orderCustomerId
-        }
-      });
+      return res.status(403).json({ message: "Forbidden: Only the order's customer can sign this contract" });
     }
 
-    // Cập nhật thông tin ký
     if (!order.contract) order.contract = {};
     order.contract.signedByBuyer = true;
-    order.contract.signedByBuyerName = order.customerInfo?.fullName || "";
+    order.contract.signedByBuyerName = order.customerId?.fullName || "";
     order.contract.signedByBuyerAt = new Date();
     if (signatureImage) order.contract.signatureImageByBuyer = signatureImage;
 
-    // Cập nhật trạng thái signed tổng thể
-    order.contract.signed = order.contract.signedBySeller && order.contract.signedByBuyer;
+    // Cập nhật trạng thái contract + order
+    computeContractStatus(order.contract);
+    computeOrderStatus(order);
 
-    const buyer = order.customerInfo;
+    const buyer = order.customerId;
     const car = order.carInfo;
     const contractDate = new Date().toLocaleDateString();
 
-    // Hàm helper render chữ ký (text hoặc ảnh)
+    // Helper render chữ ký
     const renderSignature = (sig) => {
-      if (!sig) return `<div style='font-style:italic;color:#888;'>Chưa có chữ ký</div>`;
-      const isImage = typeof sig === 'string' && (sig.startsWith("data:image") || sig.startsWith("http"));
+      if (!sig) return `<div style='font-style:italic;color:#888;'>Not Signed</div>`;
+      const isImage = typeof sig === "string" && (sig.startsWith("data:image") || sig.startsWith("http"));
       return isImage
         ? `<img src='${sig}' alt='Signature' style='max-width:180px;max-height:60px;display:block;margin:0 auto;' />`
         : `<div style='font-family:monospace;font-size:1.1rem;color:#222;margin-top:4px;'>${sig}</div>`;
@@ -343,7 +327,7 @@ export const signContractBuyer = async (req, res) => {
     const sellerSignHTML = renderSignature(order.contract.signatureImageBySeller);
     const buyerSignHTML = renderSignature(order.contract.signatureImageByBuyer);
 
-    // Giữ nguyên HTML gốc, chỉ thay chữ ký
+    // HTML hợp đồng
     const contractHTML = `<!DOCTYPE html><html><head><meta charset='utf-8'><style>
       body { font-family: Arial, sans-serif; font-size: 14px; background: #fff; color: #222; margin: 0; }
       .contract-container { max-width: 700px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px 36px 28px 36px; border: 1px solid #e3e3e3; }
@@ -397,28 +381,28 @@ export const signContractBuyer = async (req, res) => {
       </div>
       </div></body></html>`;
 
-    // Render HTML thành PDF bằng puppeteer
+    // Render PDF
     let pdfBuffer;
     try {
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
-      await page.setContent(contractHTML, { waitUntil: 'networkidle0' });
-      pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+      await page.setContent(contractHTML, { waitUntil: "networkidle0" });
+      pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
       await browser.close();
     } catch (err) {
-      return res.status(500).json({ message: 'Failed to generate PDF', error: err });
+      return res.status(500).json({ message: "Failed to generate PDF", error: err });
     }
 
-    // Upload PDF lên Cloudinary
+    // Upload PDF
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
     order.contract.url = pdfUrl;
+
     await order.save();
 
     res.json({
       message: "Buyer signed contract successfully, contract updated",
       contract: order.contract,
     });
-
   } catch (error) {
     console.error("Error in signContractBuyer:", error);
     res.status(500).json({ message: "Server error (buyer)", error: error?.message, stack: error?.stack });

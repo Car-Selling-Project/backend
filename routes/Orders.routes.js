@@ -9,7 +9,7 @@ import {
     getOrderById,
     updateOrderById,
     confirmOrder,
-    canceledOrder,
+    cancelOrder,
     getAllOrderStatusConfirm,
     getAllOrderStatus,
     getOrderByIdForCustomer,
@@ -27,7 +27,7 @@ OrderRouter.get("/orders", authAdmin, getAllOrders);
 OrderRouter.get("/orders/:id", authAdmin, getOrderById);
 OrderRouter.patch("/orders/:id", authAdmin, validateRequest(updateOrderValidationSchema), updateOrderById);
 OrderRouter.patch("/orders/:orderId/confirm", authAdmin, confirmOrder);
-OrderRouter.patch("/orders/:id/canceled", authAdmin, canceledOrder);
+OrderRouter.patch("/orders/:id/canceled", authAdmin, cancelOrder);
 
 // ---- CUSTOMER ----
 OrderRouter.post("/orderss/customers-create", authCustomer, createCustomerOrder);

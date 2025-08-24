@@ -1,58 +1,42 @@
+// controllers/review.controller.js
 import Review from "../models/review.schema.js";
+import Car from "../models/cars.schema.js";
 
-// ✅ Create Review
+/**
+ * ✅ Create new review
+ */
 export const createReview = async (req, res) => {
   try {
-    const customerId = req.customer?._id;
-    if (!customerId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
     const { carId, rating, comment } = req.body;
+    const customerId = req.user._id; // lấy từ token
+
     if (!carId || !rating) {
-      return res.status(400).json({ message: "carId and rating are required" });
-    }
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      return res.status(400).json({ message: "Car ID and rating are required" });
     }
 
-    const review = await Review.create({
+    const car = await Car.findById(carId);
+    if (!car) {
+      return res.status(404).json({ message: "Car not found" });
+    }
+
+    const review = new Review({
       customerId,
       carId,
       rating,
-      comment: comment || "",
+      comment,
     });
+    await review.save();
 
-    const populatedReview = await Review.findById(review._id)
-      .populate("customerId", "name")
-      .populate({
-        path: "carId",
-        select: "title brandId images",
-        populate: { path: "brandId", select: "name" },
-      });
-
-    return res.status(201).json({
-      message: "Review created successfully",
-      review: {
-        _id: populatedReview._id,
-        rating: populatedReview.rating,
-        comment: populatedReview.comment,
-        customer: { name: populatedReview.customerId.name },
-        car: {
-          name: populatedReview.carId.title,
-          images: populatedReview.carId.images,
-          brand: populatedReview.carId.brandId?.name || null,
-        },
-        date: populatedReview.createdAt.toISOString().split("T")[0],
-      },
-    });
+    return res.status(201).json({ message: "Review created successfully", review });
   } catch (error) {
     console.error("❌ Error creating review:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// ✅ Get all reviews
+/**
+ * ✅ Get all reviews
+ */
 export const getAllReviews = async (req, res) => {
   try {
     const reviews = await Review.find()
@@ -67,13 +51,15 @@ export const getAllReviews = async (req, res) => {
       _id: r._id,
       rating: r.rating,
       comment: r.comment,
-      customer: { name: r.customerId.name },
-      car: {
-        name: r.carId.title,
-        images: r.carId.images,
-        brand: r.carId.brandId?.name || null,
-      },
-      date: r.createdAt.toISOString().split("T")[0],
+      customer: { name: r.customerId?.name || "Unknown" },
+      car: r.carId
+        ? {
+            name: r.carId.title,
+            images: r.carId.images,
+            brand: r.carId.brandId?.name || null,
+          }
+        : null,
+      date: r.createdAt ? r.createdAt.toISOString().split("T")[0] : null,
     }));
 
     return res.status(200).json({ reviews: formattedReviews });
@@ -83,90 +69,78 @@ export const getAllReviews = async (req, res) => {
   }
 };
 
-// ✅ Update Review
+/**
+ * ✅ Get reviews by car
+ */
+export const getReviewsByCar = async (req, res) => {
+  try {
+    const { carId } = req.params;
+    const reviews = await Review.find({ carId })
+      .populate("customerId", "name")
+      .sort({ createdAt: -1 });
+
+    const formattedReviews = reviews.map((r) => ({
+      _id: r._id,
+      rating: r.rating,
+      comment: r.comment,
+      customer: { name: r.customerId?.name || "Unknown" },
+      date: r.createdAt ? r.createdAt.toISOString().split("T")[0] : null,
+    }));
+
+    return res.status(200).json({ reviews: formattedReviews });
+  } catch (error) {
+    console.error("❌ Error fetching reviews by car:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+/**
+ * ✅ Update review
+ */
 export const updateReview = async (req, res) => {
   try {
-    const customerId = req.customer?._id;
-    const { reviewId } = req.params;
+    const { id } = req.params;
     const { rating, comment } = req.body;
 
-    const review = await Review.findOne({ _id: reviewId, customerId })
-      .populate("customerId", "name")
-      .populate({
-        path: "carId",
-        select: "title brandId images",
-        populate: { path: "brandId", select: "name" },
-      });
-
+    const review = await Review.findById(id);
     if (!review) {
-      return res.status(404).json({ message: "Review not found or unauthorized" });
+      return res.status(404).json({ message: "Review not found" });
     }
 
-    if (rating !== undefined) {
-      if (rating < 1 || rating > 5) {
-        return res.status(400).json({ message: "Rating must be between 1 and 5" });
-      }
-      review.rating = rating;
+    if (String(review.customerId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Unauthorized" });
     }
 
-    if (comment !== undefined) review.comment = comment;
-
+    review.rating = rating ?? review.rating;
+    review.comment = comment ?? review.comment;
     await review.save();
 
-    return res.status(200).json({
-      message: "Review updated successfully",
-      review: {
-        _id: review._id,
-        rating: review.rating,
-        comment: review.comment,
-        customer: { name: review.customerId.name },
-        car: {
-          name: review.carId.title,
-          images: review.carId.images,
-          brand: review.carId.brandId?.name || null,
-        },
-        date: review.createdAt.toISOString().split("T")[0],
-      },
-    });
+    return res.status(200).json({ message: "Review updated successfully", review });
   } catch (error) {
     console.error("❌ Error updating review:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// ✅ Delete Review
+/**
+ * ✅ Delete review
+ */
 export const deleteReview = async (req, res) => {
   try {
-    const customerId = req.customer?._id;
-    const { reviewId } = req.params;
+    const { id } = req.params;
 
-    const review = await Review.findOneAndDelete({ _id: reviewId, customerId })
-      .populate("customerId", "name")
-      .populate({
-        path: "carId",
-        select: "title brandId images",
-        populate: { path: "brandId", select: "name" },
-      });
-
+    const review = await Review.findById(id);
     if (!review) {
-      return res.status(404).json({ message: "Review not found or unauthorized" });
+      return res.status(404).json({ message: "Review not found" });
     }
 
-    return res.status(200).json({
-      message: "Review deleted successfully",
-      review: {
-        _id: review._id,
-        rating: review.rating,
-        comment: review.comment,
-        customer: { name: review.customerId.name },
-        car: {
-          name: review.carId.title,
-          images: review.carId.images,
-          brand: review.carId.brandId?.name || null,
-        },
-        date: review.createdAt.toISOString().split("T")[0],
-      },
-    });
+    if (String(review.customerId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    await review.deleteOne();
+
+    return res.status(200).json({ message: "Review deleted successfully" });
   } catch (error) {
     console.error("❌ Error deleting review:", error);
     return res.status(500).json({ message: "Server error", error: error.message });

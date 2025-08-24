@@ -40,7 +40,7 @@ const orderSchema = new mongoose.Schema({
   qrCodeUrl: { type: String }, // chỉ dùng nếu paymentMethod === "qr"
   paymentStatus: {
     type: String,
-    enum: ["pending", "confirmed", "failed"],
+    enum: ["pending", "paid", "failed" , "deposit"],
     default: "pending"
   },
   totalPrice: {
@@ -75,12 +75,13 @@ const orderSchema = new mongoose.Schema({
   signedByBuyer: { type: Boolean, default: false },
   signedByBuyerName: { type: String },
   signedByBuyerAt: { type: Date },
-  signatureImageByBuyer: { type: String }   // lưu ảnh chữ ký buyer
+  signatureImageByBuyer: { type: String } ,  // lưu ảnh chữ ký buyer
+  status:{ type: String, enum: [  "pending", "pending_admin", "not_signed" , "signed"] , default:"pending" }
 }
 ,
   status: {
     type: String,
-    enum: ["pending", "confirmed", "canceled"],
+    enum: ["pending", "confirmed", "canceled" , "paid"],
     default: "pending"
   },
   quantity: {
@@ -92,7 +93,11 @@ const orderSchema = new mongoose.Schema({
       message: "🚫 quantity must be an integer"
     }
   },
-  stripePaymentIntentId: { type: String, default: null, index: true }
+  stripePaymentIntentId: { type: String, default: null, index: true },
+  paymentType:{
+    type: String,
+    enum:["deposit" , "full"]
+  }
 }, {
   timestamps: true
 });

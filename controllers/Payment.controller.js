@@ -1,5 +1,6 @@
 import Order from "../models/orders.schema.js";
 import QRCode from "qrcode";
+import { computeOrderStatus } from "../helper.js"; // ✅ import thêm
 
 // Fake card info (dùng để test)
 export const FAKE_CARD = {
@@ -33,23 +34,42 @@ const createDynamicQR = async (order, clientSecret) => {
   return { qrCode, expiryTime };
 };
 
-// Tạo payment (fake)
+// ================== CREATE PAYMENT ==================
 export const createPayment = async (req, res) => {
   try {
-    const { orderId, paymentMethod } = req.body;
+    const { orderId, paymentMethod, paymentType } = req.body;
+
     const validMethods = ["cash", "bank_transfer", "qr"];
     if (!validMethods.includes(paymentMethod))
       return res.status(400).json({ message: "Invalid payment method" });
+
+    if (!["deposit", "full"].includes(paymentType))
+      return res.status(400).json({ message: "Invalid payment type" });
 
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     let clientSecret = null;
     let qrData = null;
+    let amount = 0;
 
+    // ✅ Xác định số tiền theo type
+    if (paymentType === "deposit") {
+      amount = order.deposit;
+      order.paymentStatus = "deposited";
+    } else if (paymentType === "full") {
+      amount = order.totalPrice;
+
+      if (paymentMethod === "cash") {
+        order.paymentStatus = "paid";
+      } else {
+        order.paymentStatus = "pending";
+      }
+    }
+
+    // ✅ Nếu là bank/qr → tạo fake PaymentIntent
     if (["bank_transfer", "qr"].includes(paymentMethod)) {
-      // Fake PaymentIntent
-      const paymentIntent = generateFakePaymentIntent(order._id.toString(), Math.round(order.totalPrice * 100));
+      const paymentIntent = generateFakePaymentIntent(order._id.toString(), Math.round(amount * 100));
       clientSecret = paymentIntent.client_secret;
       order.stripePaymentIntentId = paymentIntent.id;
 
@@ -57,22 +77,25 @@ export const createPayment = async (req, res) => {
         qrData = await createDynamicQR(order, clientSecret);
         order.qrCodeUrl = qrData.qrCode;
       }
-
-      order.paymentStatus = "pending";
-    } else if (paymentMethod === "cash") {
-      order.paymentStatus = "confirmed";
     }
 
     order.paymentMethod = paymentMethod;
+    order.paymentType = paymentType;
+
+    // ✅ Gọi helper tính trạng thái order
+    computeOrderStatus(order);
+
     await order.save();
 
     return res.json({
       message: "Payment created (FAKE)",
       paymentMethod,
+      paymentType,
       clientSecret,
       qrData,
+      amount,
       status: order.paymentStatus,
-      fakeCard: FAKE_CARD, // gửi thông tin fake card luôn
+      fakeCard: FAKE_CARD,
     });
   } catch (error) {
     console.error("❌ Error createPayment:", error);
@@ -80,7 +103,7 @@ export const createPayment = async (req, res) => {
   }
 };
 
-// Confirm payment offline
+// ================== CONFIRM PAYMENT ==================
 export const confirmPayment = async (req, res) => {
   try {
     const { orderId } = req.body;
@@ -90,8 +113,11 @@ export const confirmPayment = async (req, res) => {
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     if (["bank_transfer", "qr"].includes(order.paymentMethod)) {
-      order.paymentStatus = "confirmed";
-      await order.save();
+      if (order.paymentStatus === "pending") {
+        order.paymentStatus = "paid";
+        computeOrderStatus(order);
+        await order.save();
+      }
       return res.json({
         message: `Payment confirmed for ${order.paymentMethod} (FAKE)`,
         status: order.paymentStatus,
@@ -112,17 +138,15 @@ export const confirmPayment = async (req, res) => {
   }
 };
 
-// Cancel payment
+// ================== CANCEL PAYMENT ==================
 export const cancelPayment = async (req, res) => {
   try {
     const { orderId } = req.body;
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.paymentStatus !== "pending")
-      return res.status(400).json({ message: "Order is not pending" });
-
-    order.paymentStatus = "canceled";
+    order.paymentStatus = "failed"; // ✅ set failed
+    computeOrderStatus(order);
     await order.save();
 
     return res.json({ message: "Payment cancelled (FAKE)", status: order.paymentStatus });
