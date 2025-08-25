@@ -23,16 +23,17 @@ export const signContractSeller = async (req, res) => {
     const { orderId } = req.params;
     const { signatureImage } = req.body;
 
-    // Lấy order
+    // Lấy order và populate
     const order = await Order.findById(orderId)
       .populate({ path: "carInfo", populate: { path: "brandId", select: "name" } })
       .populate("admin", "name phone email")
-      .populate("customerId");
+      .populate("customerId")
+      .populate("customerInfo");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (!order.contract) order.contract = {};
 
-    // Cập nhật seller ký
+    // Lưu chữ ký, tên seller, ngày ký vào database
     order.contract.signedBySeller = true;
     order.contract.signedBySellerName = order.admin?.name || "N/A";
     order.contract.signedBySellerAt = new Date();
@@ -76,7 +77,7 @@ export const signContractSeller = async (req, res) => {
       <h2>CAR SALE AGREEMENT</h2>
       <table class='contract-table'>
         <tr><td class='label'>Seller:</td><td class='value'>${order.admin?.name || "N/A"}</td></tr>
-        <tr><td class='label'>Buyer:</td><td class='value'>${buyer?.fullName || ""}</td></tr>
+        <tr><td class='label'>Buyer:</td><td class='value'>${order.customerInfo?.fullName || "N/A"}</td></tr>
         <tr><td class='label'>Vehicle:</td><td class='value'>${car?.title || ""} (${car?.brandId?.name || ""}, ${car?.model || ""})</td></tr>
         <tr><td class='label'>Vehicle Identification Number:</td><td class='value'>${car?.vin || "__________"}</td></tr>
       </table>
@@ -96,18 +97,18 @@ export const signContractSeller = async (req, res) => {
           <br>
           <div>${sellerSignHTML}</div>
           <br>
-          <div class='sign-name'>${order.admin?.name || "N/A"}</div>
+          <div class='sign-name'>${order.contract.signedBySellerName || order.admin?.name || "N/A"}</div>
           <br>
-          <div>Date: ${order.contract.signedBySellerAt ? order.contract.signedBySellerAt.toLocaleDateString() : "__________"}</div>
+          <div>Date: ${order.contract.signedBySellerAt ? new Date(order.contract.signedBySellerAt).toLocaleDateString() : "__________"}</div>
         </div>
         <div>
           <div class='sign-label'>Name of Buyer</div>
           <br>
           <div>${buyerSignHTML}</div>
           <br>
-          <div class='sign-name'>${buyer?.fullName || ""}</div>
+          <div class='sign-name'>${order.contract.signedByBuyerName || buyer?.fullName || "N/A"}</div>
           <br>
-          <div>Date: ${order.contract.signedByBuyerAt ? order.contract.signedByBuyerAt.toLocaleDateString() : "__________"}</div>
+          <div>Date: ${order.contract.signedByBuyerAt ? new Date(order.contract.signedByBuyerAt).toLocaleDateString() : "__________"}</div>
         </div>
       </div>
       </div></body></html>`;
@@ -128,6 +129,7 @@ export const signContractSeller = async (req, res) => {
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
     order.contract.url = pdfUrl;
 
+    // Lưu order
     await order.save();
 
     res.json({
@@ -177,7 +179,8 @@ export const createContract = async (req, res) => {
         populate: { path: "brandId", select: "name" },
       })
       .populate("admin", "name phone email")
-      .populate("customerId");
+      .populate("customerId")
+      .populate("customerInfo");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
@@ -295,31 +298,35 @@ export const signContractBuyer = async (req, res) => {
     const { orderId } = req.params;
     const { signatureImage } = req.body;
 
+    // Lấy order và populate
     const order = await Order.findById(orderId)
       .populate({ path: "carInfo", populate: { path: "brandId", select: "name" } })
       .populate("admin", "name phone email")
-      .populate("customerId");
+      .populate("customerId")
+      .populate("customerInfo");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (!order.admin) order.admin = { name: "N/A" };
 
-    // Check customer
-    let orderCustomerId = order.customerId?._id || order.customerId;
+    // Kiểm tra quyền của customer
+    const orderCustomerId = order.customerId?._id || order.customerId;
     if (!req.customer || String(req.customer._id) !== String(orderCustomerId)) {
       return res.status(403).json({ message: "Forbidden: Only the order's customer can sign this contract" });
     }
 
+    // Khởi tạo contract nếu chưa có
     if (!order.contract) order.contract = {};
+
+    // Lưu chữ ký, tên người ký, ngày ký vào database ngay lúc ký
     order.contract.signedByBuyer = true;
-    order.contract.signedByBuyerName = order.customerId?.fullName || "";
+    order.contract.signedByBuyerName = order.customerInfo?.fullName || "N/A";
     order.contract.signedByBuyerAt = new Date();
     if (signatureImage) order.contract.signatureImageByBuyer = signatureImage;
 
-    // Cập nhật trạng thái contract + order
+    // Cập nhật trạng thái contract & order
     computeContractStatus(order.contract);
     computeOrderStatus(order);
 
-    const buyer = order.customerId;
     const car = order.carInfo;
     const contractDate = new Date().toLocaleDateString();
 
@@ -353,7 +360,7 @@ export const signContractBuyer = async (req, res) => {
       <h2>CAR SALE AGREEMENT</h2>
       <table class='contract-table'>
         <tr><td class='label'>Seller:</td><td class='value'>${order.admin?.name || "N/A"}</td></tr>
-        <tr><td class='label'>Buyer:</td><td class='value'>${buyer?.fullName || ""}</td></tr>
+        <tr><td class='label'>Buyer:</td><td class='value'>${order.customerInfo?.fullName || "N/A"}</td></tr>
         <tr><td class='label'>Vehicle:</td><td class='value'>${car?.title || ""} (${car?.brandId?.name || ""}, ${car?.model || ""})</td></tr>
         <tr><td class='label'>Vehicle Identification Number:</td><td class='value'>${car?.vin || "__________"}</td></tr>
       </table>
@@ -375,16 +382,16 @@ export const signContractBuyer = async (req, res) => {
           <br>
           <div class='sign-name'>${order.admin?.name || "N/A"}</div>
           <br>
-          <div>Date: ${order.contract.signedBySellerAt ? order.contract.signedBySellerAt.toLocaleDateString() : "__________"}</div>
+          <div>Date: ${order.contract.signedBySellerAt ? new Date(order.contract.signedBySellerAt).toLocaleDateString() : "__________"}</div>
         </div>
         <div>
           <div class='sign-label'>Name of Buyer</div>
           <br>
           <div>${buyerSignHTML}</div>
           <br>
-          <div class='sign-name'>${buyer?.fullName || ""}</div>
+          <div class='sign-name'>${order.contract.signedByBuyerName || order.customerId?.fullName || "N/A"}</div>
           <br>
-          <div>Date: ${order.contract.signedByBuyerAt ? order.contract.signedByBuyerAt.toLocaleDateString() : "__________"}</div>
+          <div>Date: ${order.contract.signedByBuyerAt ? new Date(order.contract.signedByBuyerAt).toLocaleDateString() : "__________"}</div>
         </div>
       </div>
       </div></body></html>`;
@@ -405,6 +412,7 @@ export const signContractBuyer = async (req, res) => {
     const pdfUrl = await uploadToCloudinary({ buffer: pdfBuffer });
     order.contract.url = pdfUrl;
 
+    // Lưu order
     await order.save();
 
     res.json({
@@ -416,6 +424,7 @@ export const signContractBuyer = async (req, res) => {
     res.status(500).json({ message: "Server error (buyer)", error: error?.message, stack: error?.stack });
   }
 };
+
 
 export const getContractStatusForCustomer = async (req, res) => {
   try {
