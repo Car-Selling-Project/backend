@@ -21,8 +21,7 @@ const orderSchema = new mongoose.Schema({
     default: 0,
     validate: {
       validator: function (value) {
-        // Nếu deposit > 0, phải >= 30% tổng giá và <= 100%
-        if (!this.totalPrice) return true; // skip nếu totalPrice chưa set
+        if (!this.totalPrice) return true;
         return value === this.totalPrice || (value >= 0.3 * this.totalPrice && value < this.totalPrice);
       },
       message: props => `🚫 deposit must be at least 30% of totalPrice or equal to totalPrice`
@@ -33,11 +32,15 @@ const orderSchema = new mongoose.Schema({
     enum: ["cash", "bank_transfer", "qr"],
     default: "cash"
   },
+  paymentType:{
+    type: String,
+    enum:["deposit" , "full"]
+  },
   bankDetails: {
-    bankName: { type: String }, // chỉ điền nếu paymentMethod === "bank_transfer"
+    bankName: { type: String },
     bankAccountNumber: { type: String }
   },
-  qrCodeUrl: { type: String }, // chỉ dùng nếu paymentMethod === "qr"
+  qrCodeUrl: { type: String },
   paymentStatus: {
     type: String,
     enum: ["pending", "paid", "failed" , "deposited"],
@@ -65,20 +68,18 @@ const orderSchema = new mongoose.Schema({
     address: { type: String, required: true }
   },
   contract: {
-  url: { type: String },                    // link hợp đồng PDF
-  signed: { type: Boolean, default: false }, // tổng quan đã ký đủ chưa
-  signedBySeller: { type: Boolean, default: false },
-  signedBySellerName: { type: String },
-  signedBySellerAt: { type: Date },
-  signatureImageBySeller: { type: String }, // lưu ảnh chữ ký seller
-
-  signedByBuyer: { type: Boolean, default: false },
-  signedByBuyerName: { type: String },
-  signedByBuyerAt: { type: Date },
-  signatureImageByBuyer: { type: String } ,  // lưu ảnh chữ ký buyer
-  status:{ type: String, enum: [  "pending", "pending_admin", "not_signed" , "signed"] , default:"pending" }
-}
-,
+    url: { type: String },
+    signed: { type: Boolean, default: false },
+    signedBySeller: { type: Boolean, default: false },
+    signedBySellerName: { type: String },
+    signedBySellerAt: { type: Date },
+    signatureImageBySeller: { type: String },
+    signedByBuyer: { type: Boolean, default: false },
+    signedByBuyerName: { type: String },
+    signedByBuyerAt: { type: Date },
+    signatureImageByBuyer: { type: String },
+    status:{ type: String, enum: ["pending", "pending_admin", "not_signed" , "signed"], default:"pending" }
+  },
   status: {
     type: String,
     enum: ["pending", "confirmed", "canceled" , "paid"],
@@ -94,13 +95,22 @@ const orderSchema = new mongoose.Schema({
     }
   },
   stripePaymentIntentId: { type: String, default: null, index: true },
-  paymentType:{
-    type: String,
-    enum:["deposit" , "full"]
-  }
-}, {
-  timestamps: true
-});
+
+  // ---------------- FIX: payment array ----------------
+  payment: [
+    {
+      _id: { type: String, required: true },
+      status: { type: String, enum: ["pending","paid","failed","deposited"], default: "pending" },
+      amount: { type: Number, required: true },
+      method: { type: String, enum: ["cash","bank_transfer","qr"], required: true },
+      type: { type: String, enum: ["deposit","full"], required: true },
+      createdAt: { type: Date, default: Date.now },
+      name: { type: String },
+      deleted: { type: Boolean, default: false }
+    }
+  ]
+
+}, { timestamps: true });
 
 const Order = mongoose.model("Order", orderSchema);
 export default Order;

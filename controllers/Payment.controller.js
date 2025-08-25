@@ -1,8 +1,8 @@
 import Order from "../models/orders.schema.js";
 import QRCode from "qrcode";
-import { computeOrderStatus } from "../helper.js"; // ✅ import thêm
+import { computeOrderStatus } from "../helper.js";
 
-// Fake card info (dùng để test)
+// Fake card info
 export const FAKE_CARD = {
   number: "4242 4242 4242 4242",
   exp_month: "12",
@@ -11,15 +11,13 @@ export const FAKE_CARD = {
 };
 
 // Fake PaymentIntent generator
-const generateFakePaymentIntent = (orderId, amount) => {
-  return {
-    id: `pi_fake_${Date.now()}`,
-    client_secret: `cs_fake_${Date.now()}`,
-    amount,
-    metadata: { orderId },
-    status: "requires_payment_method",
-  };
-};
+const generateFakePaymentIntent = (orderId, amount) => ({
+  id: `pi_fake_${Date.now()}`,
+  client_secret: `cs_fake_${Date.now()}`,
+  amount,
+  metadata: { orderId },
+  status: "requires_payment_method",
+});
 
 // Tạo QR code động
 const createDynamicQR = async (order, clientSecret) => {
@@ -51,25 +49,19 @@ export const createPayment = async (req, res) => {
 
     let clientSecret = null;
     let qrData = null;
-    let amount = 0;
+    let finalAmount = 0;
 
-    // ✅ Xác định số tiền theo type
-    if (paymentType === "deposit") {
-      amount = order.deposit;
-      order.paymentStatus = "deposited";
-    } else if (paymentType === "full") {
-      amount = order.totalPrice;
+    // Xác định số tiền
+    if (paymentType === "deposit") finalAmount = order.deposit;
+    else if (paymentType === "full") finalAmount = order.totalPrice;
 
-      if (paymentMethod === "cash") {
-        order.paymentStatus = "paid";
-      } else {
-        order.paymentStatus = "pending";
-      }
-    }
+    let status = "pending";
+    if (paymentType === "deposit" && paymentMethod === "cash") status = "deposited";
+    if (paymentType === "full" && paymentMethod === "cash") status = "paid";
 
-    // ✅ Nếu là bank/qr → tạo fake PaymentIntent
+    // Fake PaymentIntent cho bank/qr
     if (["bank_transfer", "qr"].includes(paymentMethod)) {
-      const paymentIntent = generateFakePaymentIntent(order._id.toString(), Math.round(amount * 100));
+      const paymentIntent = generateFakePaymentIntent(order._id.toString(), Math.round(finalAmount * 100));
       clientSecret = paymentIntent.client_secret;
       order.stripePaymentIntentId = paymentIntent.id;
 
@@ -79,22 +71,31 @@ export const createPayment = async (req, res) => {
       }
     }
 
+    const newPayment = {
+      _id: `payment_${Date.now()}`,
+      status,
+      amount: finalAmount,
+      method: paymentMethod,
+      type: paymentType,
+      createdAt: new Date(),
+      name: paymentType === "deposit" ? "Deposit" : "Full Payment",
+      deleted: false,
+    };
+
+    order.payment = order.payment || [];
+    order.payment.push(newPayment);
     order.paymentMethod = paymentMethod;
     order.paymentType = paymentType;
 
-    // ✅ Gọi helper tính trạng thái order
     computeOrderStatus(order);
-
     await order.save();
 
-    return res.json({
+    res.json({
       message: "Payment created (FAKE)",
-      paymentMethod,
-      paymentType,
+      payment: newPayment,
       clientSecret,
       qrData,
-      amount,
-      status: order.paymentStatus,
+      status: newPayment.status,
       fakeCard: FAKE_CARD,
     });
   } catch (error) {
@@ -103,102 +104,100 @@ export const createPayment = async (req, res) => {
   }
 };
 
-// ================== CONFIRM PAYMENT ==================
-export const confirmPayment = async (req, res) => {
-  try {
-    const { orderId } = req.body;
-    if (!orderId) return res.status(400).json({ message: "orderId is required" });
-
-    const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ message: "Order not found" });
-
-    if (["bank_transfer", "qr"].includes(order.paymentMethod)) {
-      if (order.paymentStatus === "pending") {
-        order.paymentStatus = "paid";
-        computeOrderStatus(order);
-        await order.save();
-      }
-      return res.json({
-        message: `Payment confirmed for ${order.paymentMethod} (FAKE)`,
-        status: order.paymentStatus,
-      });
-    }
-
-    if (order.paymentMethod === "cash") {
-      return res.json({
-        message: "Cash payment already confirmed",
-        status: order.paymentStatus,
-      });
-    }
-
-    return res.status(400).json({ message: "Cannot confirm unknown payment method" });
-  } catch (error) {
-    console.error("❌ Error confirmPayment:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
 // ================== CANCEL PAYMENT ==================
 export const cancelPayment = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { orderId, paymentId } = req.body;
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    order.paymentStatus = "failed"; // ✅ set failed
+    if (!order.payment || order.payment.length === 0)
+      return res.status(400).json({ message: "No payments found" });
+
+    const payment = order.payment.find(p => p._id === paymentId);
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    payment.status = "failed";
+    payment.deleted = true;
+
     computeOrderStatus(order);
     await order.save();
 
-    return res.json({ message: "Payment cancelled (FAKE)", status: order.paymentStatus });
+    res.json({ message: "Payment cancelled", payment });
   } catch (error) {
-    console.error("❌ Error cancelPayment:", error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-// ---------------- Admin ----------------
+
+
+// ================== CONFIRM PAYMENT ==================
+export const confirmPayment = async (req, res) => {
+  try {
+    const { orderId, paymentId } = req.body;
+    if (!orderId || !paymentId)
+      return res.status(400).json({ message: "orderId and paymentId are required" });
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const payment = order.payment.find(p => p._id === paymentId);
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    // ✅ Chỉ confirm nếu đang pending hoặc deposited
+    if (["pending", "deposited"].includes(payment.status)) {
+      payment.status = "paid";
+      payment.deleted = false;
+
+      // Cập nhật paymentStatus chung nếu muốn
+      order.paymentStatus = "paid";
+
+      computeOrderStatus(order);
+      await order.save();
+    }
+
+    res.json({
+      message: "Payment confirmed",
+      payment,
+      paymentStatus: payment.status
+    });
+  } catch (error) {
+    console.error("❌ Error confirmPayment:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+export const getPaymentForCustomer = async (req, res) => {
+  try {
+    const customerId = req.customer._id;
+
+    const orders = await Order.find({ customerId })
+      .select("totalPrice deposit payment paymentStatus paymentMethod paymentType createdAt");
+
+    // Trả về luôn mảng payment chi tiết
+    res.json({ data: orders });
+  } catch (error) {
+    console.error("❌ Error getPaymentsForCustomer:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 export const getPaymentForAdmin = async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    const order = await Order.findById(orderId, "payment"); // lấy toàn bộ payment
-    if (!order) return res.status(404).json({ message: "Order not found" });
-
-    const payment = order.payment || {};
-    const paymentStatus = payment.status || null;
-
-    res.json({
-      payment,
-      paymentStatus,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
-  }
-}
-
-// ---------------- Customer ----------------
-export const getPaymentForCustomer = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const customerId = req.customer._id;
-
-    if (!customerId) 
-      return res.status(401).json({ message: "Unauthorized" });
-
-    const order = await Order.findOne(
-      { _id: orderId, customerId },
-      "payment"
-    );
+    const order = await Order.findById(orderId)
+      .select("totalPrice deposit payment paymentStatus paymentMethod paymentType createdAt");
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const payment = order.payment || {};
-    const paymentStatus = payment.status || null;
-
     res.json({
-      payment,
-      paymentStatus,
+      orderId: order._id,
+      payment: order.payment || [],
+      paymentStatus: order.paymentStatus,
+      totalPrice: order.totalPrice,
+      deposit: order.deposit
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("❌ Error getPaymentsForAdmin:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-} 
+};

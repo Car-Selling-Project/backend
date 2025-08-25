@@ -14,5 +14,4 @@ PaymentRouter.get("/payments", authCustomer, getPaymentForCustomer);
 PaymentRouter.patch("/payment/:id/confirm", authAdmin, confirmPayment);
 PaymentRouter.patch("/payment/cancel", authAdmin, cancelPayment);
 PaymentRouter.get("/payment/:orderId", authAdmin, getPaymentForAdmin);
-
 export default PaymentRouter;
