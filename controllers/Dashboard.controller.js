@@ -1,4 +1,5 @@
 import Order from "../models/orders.schema.js";
+import Customer from "../models/customers.schema.js";
 //Lấy danh sách hoá đơn + lọc theo ngày tháng + tính tổng doanh thu
 export const getOrdersWithRevenue = async (req, res) => {
   try {
@@ -172,3 +173,12 @@ export const getTopSalesAdmins = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const countCustomers = async (req , res) => {
+  try {
+    const count = await Customer.countDocuments({});
+    return res.json({ count });
+  } catch (error) {
+    console.error("Error counting customers:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
