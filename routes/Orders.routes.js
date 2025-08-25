@@ -36,8 +36,8 @@ OrderRouter.get("/orderss/confirm", authCustomer, getAllOrderStatusConfirm);
 OrderRouter.get("/orderss", authCustomer, getOrdersForCustomer);
 OrderRouter.get("/orderss-status", authCustomer, getAllOrderStatus);
 OrderRouter.get("/orderss/:id", authCustomer, getOrderByIdForCustomer);
-OrderRouter.patch("/orderss/:id/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
-OrderRouter.patch("/orderss/:id/deposit", authCustomer, updateDepositForCustomer);
+OrderRouter.patch("/orderss/:orderId/paymentmethod", authCustomer, updatePaymentMethodForCustomer);
+OrderRouter.patch("/orderss/:orderId/deposit", authCustomer, updateDepositForCustomer);
 OrderRouter.get("/orderss/allorderforcustomer", authCustomer, getAllOrdersForCustomer);
 OrderRouter.get("/orderss/status", authCustomer, getAllOrderStatusForCustomer);
 
