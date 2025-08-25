@@ -31,7 +31,6 @@ export const createOrder = async (req, res) => {
       quantity = 1,
       paymentMethod,
       bankDetails,
-      qrCodeUrl,
       deposit: reqDeposit,
       paymentType = "full",
       ...rest
@@ -312,7 +311,6 @@ export const createCustomerOrder = async (req, res) => {
       quantity = 1,
       paymentMethod,
       bankDetails,
-      qrCodeUrl,
       deposit: reqDeposit,
       paymentType = "full",
       ...rest
