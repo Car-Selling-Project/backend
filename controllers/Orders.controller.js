@@ -95,12 +95,11 @@ export const createOrder = async (req, res) => {
     }
 
     // Validate QR
-    if (paymentMethod === "qr") {
-      if (!qrCodeUrl) {
-        return res.status(400).json({ message: "❌ qrCodeUrl is required for QR payment" });
-      }
-      payload.qrCodeUrl = qrCodeUrl;
-    }
+ if (paymentMethod === "qr") {
+  // Backend tự tạo QR code, không cần FE gửi qrCodeUrl
+  payload.qrCodeUrl = "";
+}
+
 
     const newOrder = await Order.create(payload);
     const populatedOrder = await populateOrder(Order.findById(newOrder._id));

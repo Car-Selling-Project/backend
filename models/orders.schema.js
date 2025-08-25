@@ -40,6 +40,7 @@ const orderSchema = new mongoose.Schema({
     bankName: { type: String },
     bankAccountNumber: { type: String }
   },
+  qrCodeUrl: { type: String , default: "" },
   paymentStatus: {
     type: String,
     enum: ["pending", "paid", "failed" , "deposited"],

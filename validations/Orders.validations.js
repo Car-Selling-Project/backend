@@ -62,11 +62,13 @@ const orderValidationSchema = Joi.object({
     }).required(),
     otherwise: Joi.forbidden(),
   }),
-
-  qrCodeUrl: Joi.when('paymentMethod', {
+  qrCodeUrl: Joi.string()
+  .uri()
+  .default("")
+  .when('paymentMethod', {
     is: 'qr',
     then: Joi.string().uri().required(),
-    otherwise: Joi.forbidden(),
+    otherwise: Joi.string().allow("").optional(),
   }),
 
   customerInfo: Joi.object({
