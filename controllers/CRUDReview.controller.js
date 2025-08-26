@@ -8,7 +8,7 @@ import Car from "../models/cars.schema.js";
 export const createReview = async (req, res) => {
   try {
     const { carId, rating, comment } = req.body;
-    const customerId = req.user._id; // lấy từ token
+    const customerId = req.customer._id; // lấy từ token
 
     if (!carId || !rating) {
       return res.status(400).json({ message: "Car ID and rating are required" });
