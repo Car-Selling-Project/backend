@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import { validateRequest } from "../middlewares/validateRequest.middlewares.js";
 import { resetPasswordLimiter } from "../middlewares/ResetPasswordLimiter.middlewares.js";
 import {
@@ -12,21 +11,16 @@ import resetPasswordAdminSchema from "../validations/AdminsResetPassword.validat
 
 const resetPasswordAdminRouter = express.Router();
 
-// CORS chỉ bật credentials ở route cần dùng session (reset-password)
-const corsWithCredentials = cors({
-  origin: "http://localhost:5173", // hoặc domain FE thật sự của bạn
-  credentials: true,
-});
-
+// ✅ Route quên mật khẩu
 resetPasswordAdminRouter.post(
   "/forgot-password",
   validateRequest(checkEmployeeCodeSchema),
   checkEmployeeCodeExists
 );
 
+// ✅ Route đặt lại mật khẩu
 resetPasswordAdminRouter.post(
   "/reset-password",
-  corsWithCredentials, // Chỉ route này cần session/cookie
   resetPasswordLimiter,
   validateRequest(resetPasswordAdminSchema),
   resetAdminPassword
