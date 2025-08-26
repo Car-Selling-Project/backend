@@ -43,7 +43,7 @@ connectDB()
     process.exit(1);
   });
 // ✅ Cấu hình CORS
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = ["http://localhost:5173" , "https://carsellingwebsiteadmin.onrender.com/"];
 
 const corsOptions = {
   origin: function (origin, callback) {
