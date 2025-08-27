@@ -48,6 +48,7 @@ connectDB()
 const allowedOrigins = [
   "http://localhost:5173",
   "https://carsellingwebsiteadmin.onrender.com",
+  "https://carsellingwebsite.onrender.com"
 ];
 
 const corsOptions = {
